@@ -136,3 +136,67 @@ increase in developer productivity and speed of interaction of Solana tooling."*
 - Naming an instruction is not the same as knowing what it does to state.
   A discriminator database gives you the former. `../dormant/semantics.py` is an
   attempt at the latter, and it is much harder.
+
+---
+
+# Addendum: the strongest objection to the above, measured
+
+The honest limits section said an on-chain Anchor IDL lets a developer read
+more than the RPC hands them, that measuring how much more was the obvious next
+experiment, and that it had not been done. It has now: `idl_availability.py`.
+
+The objection deserves stating at full strength, because it is the one that
+should decide whether semantics work is worth funding at all:
+
+> Your 42% measures what the RPC's `jsonParsed` does, not what is *knowable*.
+> Most modern Anchor programs upload their IDL on chain. Fetch and cache those
+> and much of the gap closes with a caching script, not hand-written semantics.
+
+**It is half right, and the half matters.** Of the top 25 opaque programs:
+
+| | programs | share of top-25 volume |
+|---|---|---|
+| publish an on-chain Anchor IDL | **10** | **57.7%** |
+| publish none | **15** | **42.3%** |
+
+So a caching script is worth real coverage, and anyone claiming otherwise has
+not checked. The full ladder, in shares of *all* mainnet instructions:
+
+| level | reachable by | legible |
+|---|---|---|
+| **0** | the RPC alone, today | **63.8%** |
+| **1** | + caching every on-chain IDL | **80.7%** |
+| **2** | + semantics for the top 25 | **93.1%** |
+
+**Level 1 is a weekend's work and it is genuinely worth 17 points.** That is a
+real finding and it argues against part of the case for funding this.
+
+Two things survive it.
+
+**Fifteen of the twenty-five publish nothing.** They are 12.4% of all mainnet
+instruction volume and no amount of caching reaches them. They are
+disproportionately AMMs and launchpads -- the programs moving the most value,
+and the ones least interested in being read.
+
+**And an IDL names; it does not state effect.** This is the distinction the
+whole project rests on. An IDL will tell you an instruction is called
+`set_authority` and takes an account named `new_authority`. It will not tell you
+that `new_authority` is not a signer of this transaction, and that control is
+therefore leaving the room with nobody present to speak for it. That is not a
+naming problem and no IDL solves it. It is unsolved for all 25 programs,
+including the 10 with excellent IDLs.
+
+So the levels are not degrees of the same thing. Level 1 answers *what is this
+called*. Level 2 answers *what will this do to me*. Only the second is a
+question a signer can act on, and only the second is what this project builds.
+
+**What this changed.** Modelling a program with a published IDL is meaningfully
+cheaper than reverse-engineering one without, so pricing them identically was
+wrong. The cost model is now tiered by a measured property of each named
+program rather than by an average.
+
+    python measurement/idl_availability.py
+
+Pure Python, public RPC, no key. The ed25519 on-curve test needed for
+`find_program_address` is implemented in the file rather than imported, so the
+result stays reproducible by anyone.
