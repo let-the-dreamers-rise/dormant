@@ -1,5 +1,9 @@
 # Dormant
 
+> **Solana Foundation reviewers:** the funding proposal is in
+> [`GRANT.md`](GRANT.md) -- the 25 programs by ID, the acceptance test, the
+> schedule, the budget, and the commands to verify every number yourself.
+
 **What does this transaction do when it wakes up?**
 
 A Solana transaction signed with a durable nonce does not expire. It sits,
