@@ -1,14 +1,17 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="Paste an unsigned Solana transaction and read, offline and in your browser, exactly what signing it hands over.">
-<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Dormant</title>
+<meta name="description" content="Paste an unsigned Solana transaction and read, offline and in your browser, exactly what signing it would hand over.">
+<meta property="og:title" content="Dormant">
+<meta property="og:description" content="Naming a Solana instruction is not the same as knowing what it does. Dormant states the effect, and the condition it depends on.">
+<meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Serif:wght@500;600&display=swap">
 <style>
+
 :root{
   --ground:#eef1f1; --panel:#ffffff; --sunk:#e4e9e9;
   --ink:#0b1214; --muted:#5a6a6e; --line:#d3dbdb; --line-soft:#e2e8e8;
@@ -158,38 +161,265 @@ footer{border-top:1px solid var(--line);padding-top:14px;font-size:12.5px;
   color:var(--muted);line-height:1.6;max-width:82ch}
 footer b{color:var(--ink);font-weight:600}
 footer code{font-family:var(--mono);font-size:11.5px}
+
+</style>
+<style>
+:root{
+  --serif:"IBM Plex Serif",Georgia,"Times New Roman",serif;
+  /* The hero is the instrument's own screen: it stays dark in both themes,
+     so these are declared once and never flipped. */
+  --hero-bg:#08191b; --hero-ink:#e9f3f2; --hero-dim:#8fb1b1;
+  --hero-line:#16383b; --hero-accent:#4fd6d2; --hero-panel:#0d2225;
+}
+
+.lp{max-width:1180px;margin:0 auto;padding:0 20px}
+
+/* ---- top bar ---- */
+.lp-top{border-bottom:1px solid var(--hero-line);background:var(--hero-bg)}
+.lp-top .lp{display:flex;align-items:center;gap:8px 22px;flex-wrap:wrap;
+  padding-top:15px;padding-bottom:15px}
+.lp-mark{font:600 17px/1 var(--mono);letter-spacing:-.02em;color:var(--hero-ink);
+  text-decoration:none}
+.lp-mark i{font-style:normal;color:var(--hero-accent)}
+.lp-nav{display:flex;gap:20px;margin-left:auto;align-items:center;flex-wrap:wrap}
+.lp-nav a{font:500 12px/1 var(--mono);color:var(--hero-dim);text-decoration:none;
+  border-bottom:1px solid transparent;padding-bottom:3px}
+.lp-nav a:hover{color:var(--hero-accent);border-color:var(--hero-accent)}
+.lp-top .themebtn{margin-left:0;color:var(--hero-dim);border-color:var(--hero-line)}
+.lp-top .themebtn:hover{color:var(--hero-accent);border-color:var(--hero-accent)}
+
+/* ---- hero ---- */
+.lp-hero{background:var(--hero-bg);color:var(--hero-ink)}
+.lp-hero .lp{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);
+  gap:44px;align-items:start;padding-top:56px;padding-bottom:56px}
+@media (max-width:900px){.lp-hero .lp{grid-template-columns:minmax(0,1fr);gap:34px;
+  padding-top:40px;padding-bottom:40px}}
+.lp-eye{font:600 10.5px/1.5 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--hero-accent);margin:0 0 20px}
+.lp-hero h1{font-family:var(--serif);font-weight:600;
+  font-size:clamp(32px,4.6vw,52px);line-height:1.07;letter-spacing:-.021em;
+  margin:0;color:var(--hero-ink);text-wrap:balance;max-width:15ch}
+.lp-lede{margin:22px 0 0;font-size:16px;line-height:1.6;color:var(--hero-dim);
+  max-width:58ch}
+.lp-lede b{color:var(--hero-ink);font-weight:500}
+.lp-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:26px}
+.lp-btn{display:inline-block;text-decoration:none;border-radius:var(--r);
+  padding:11px 18px;font:600 13.5px/1 var(--sans)}
+.lp-btn.solid{background:var(--hero-accent);color:#062023}
+.lp-btn.solid:hover{filter:brightness(1.08)}
+.lp-btn.wire{color:var(--hero-ink);border:1px solid var(--hero-line)}
+.lp-btn.wire:hover{border-color:var(--hero-accent);color:var(--hero-accent)}
+.lp-facts{display:flex;flex-wrap:wrap;gap:12px 34px;margin:34px 0 0;padding:20px 0 0;
+  border-top:1px solid var(--hero-line);list-style:none}
+.lp-facts li{font-family:var(--mono);font-size:11.5px;color:var(--hero-dim);
+  line-height:1.5}
+.lp-facts b{display:block;font-size:20px;font-weight:500;color:var(--hero-ink);
+  font-variant-numeric:tabular-nums;letter-spacing:-.01em;margin-bottom:3px}
+
+/* ---- hero figure: one instruction, decoded ---- */
+.chain{margin:0;background:var(--hero-panel);border:1px solid var(--hero-line);
+  border-radius:var(--r);overflow:hidden}
+.chain-cap{font:600 10px/1 var(--mono);letter-spacing:.14em;text-transform:uppercase;
+  color:var(--hero-dim);padding:13px 16px;border-bottom:1px solid var(--hero-line)}
+.chain-row{display:grid;grid-template-columns:82px minmax(0,1fr);gap:12px;
+  align-items:baseline;padding:9px 16px;border-bottom:1px solid var(--hero-line)}
+.chain-k{font:500 10px/1.6 var(--mono);letter-spacing:.1em;text-transform:uppercase;
+  color:var(--hero-dim)}
+.chain-v{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px;min-width:0}
+.chain-v code{font-family:var(--mono);font-size:12px;color:var(--hero-ink);
+  word-break:break-all}
+.chain-v code.hi{color:var(--hero-accent);font-weight:500}
+.chain-ar{color:var(--hero-dim);font-size:12px}
+.flag{font:600 9.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;
+  padding:4px 6px;border-radius:2px;white-space:nowrap}
+.flag.w{background:#2a2110;color:#e0ab3e}
+.flag.s{background:#0d2f31;color:var(--hero-accent)}
+.flag.n{background:#301613;color:#f0705c}
+.chain-out{margin:0;padding:15px 16px;font-size:13.5px;line-height:1.6;
+  color:var(--hero-dim);background:#0a1d20}
+.chain-out b{display:inline-block;font:600 9.5px/1 var(--mono);letter-spacing:.13em;
+  text-transform:uppercase;background:#301613;color:#f0705c;padding:4px 6px;
+  border-radius:2px;margin-right:8px;vertical-align:1px}
+.chain-out code{font-family:var(--mono);font-size:12.5px;color:var(--hero-ink)}
+
+/* ---- page sections ---- */
+.lp-sec{padding:62px 0;border-top:1px solid var(--line)}
+.lp-sec:first-of-type{border-top:0}
+.lp-head{max-width:68ch;margin-bottom:34px}
+.lp-h{font-family:var(--serif);font-weight:600;font-size:clamp(23px,2.9vw,33px);
+  line-height:1.16;letter-spacing:-.018em;margin:10px 0 0;text-wrap:balance}
+.lp-sub{margin:14px 0 0;font-size:15px;line-height:1.62;color:var(--muted)}
+.lp-sub b{color:var(--ink);font-weight:500}
+.lp-two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:40px;
+  align-items:start}
+@media (max-width:900px){.lp-two{grid-template-columns:minmax(0,1fr);gap:30px}}
+.lp-prose p{margin:0 0 14px;font-size:14.5px;line-height:1.66;max-width:62ch}
+.lp-prose p:last-child{margin-bottom:0}
+.lp-prose b{font-weight:600}
+.lp-prose code{font-family:var(--mono);font-size:12.5px;
+  background:var(--sunk);padding:1px 4px;border-radius:2px}
+
+/* ---- the coverage ladder, drawn to scale ---- */
+.ladder{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);
+  padding:18px 20px 14px}
+.ladder-t{font:600 10.5px/1 var(--mono);letter-spacing:.13em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 18px}
+.bar{margin-bottom:17px}
+.bar-l{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+.bar-l span{font-size:13px;line-height:1.4;min-width:0}
+.bar-l b{margin-left:auto;font:500 14px/1 var(--mono);font-variant-numeric:tabular-nums;
+  letter-spacing:-.01em}
+.bar-t{height:9px;background:var(--sunk);border-radius:1px;overflow:hidden}
+.bar-f{height:100%;background:var(--accent);opacity:.42}
+.bar:last-of-type .bar-f{opacity:1}
+.ladder-ax{display:flex;justify-content:space-between;border-top:1px solid var(--line-soft);
+  padding-top:7px;font:400 10px/1 var(--mono);color:var(--muted);
+  font-variant-numeric:tabular-nums}
+.ladder-n{margin:14px 0 0;font-size:11.5px;line-height:1.55;color:var(--muted)}
+
+/* ---- the live tool frame ---- */
+.lp-demo{background:var(--sunk);border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line)}
+.lp-demo .lp{padding-top:52px;padding-bottom:56px}
+.lp-live{display:inline-flex;align-items:center;gap:7px;font:600 10.5px/1 var(--mono);
+  letter-spacing:.13em;text-transform:uppercase;color:var(--accent)}
+.lp-live::before{content:"";width:6px;height:6px;border-radius:50%;
+  background:var(--accent)}
+
+/* ---- prior art ---- */
+.lp-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);
+  background:var(--panel)}
+table.lp-t{border-collapse:collapse;width:100%;min-width:620px;font-size:13.5px}
+.lp-t th,.lp-t td{text-align:left;padding:12px 16px;vertical-align:top;
+  border-bottom:1px solid var(--line-soft)}
+.lp-t tr:last-child td{border-bottom:0}
+.lp-t th{font:600 10px/1.4 var(--mono);letter-spacing:.12em;text-transform:uppercase;
+  color:var(--muted);background:var(--sunk);white-space:nowrap}
+.lp-t td:first-child{font-weight:600;white-space:nowrap}
+.lp-t td.no{color:var(--muted)}
+.gaps{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px;
+  margin-top:22px}
+.gap{border:1px solid var(--line);border-left:4px solid var(--accent);
+  border-radius:var(--r);background:var(--panel);padding:16px 18px}
+.gap h3{font-family:var(--serif);font-weight:600;font-size:16px;line-height:1.3;
+  margin:0 0 8px}
+.gap p{margin:0;font-size:13.5px;line-height:1.6;color:var(--muted)}
+.gap p b{color:var(--ink);font-weight:600}
+.uses{list-style:none;margin:0;padding:0;border:1px solid var(--line);
+  border-radius:var(--r);background:var(--panel);overflow:hidden}
+.uses li{padding:13px 17px;border-bottom:1px solid var(--line-soft);font-size:13.5px;
+  line-height:1.55}
+.uses li:last-child{border-bottom:0}
+.uses b{display:block;font:600 10.5px/1 var(--mono);letter-spacing:.11em;
+  text-transform:uppercase;color:var(--accent);margin-bottom:6px}
+.uses span{color:var(--muted)}
+
+/* ---- scope ---- */
+.ms{list-style:none;margin:0;padding:0;border:1px solid var(--line);
+  border-radius:var(--r);background:var(--panel);overflow:hidden}
+.ms li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px 16px;
+  align-items:baseline;padding:14px 18px;border-bottom:1px solid var(--line-soft)}
+.ms li:last-child{border-bottom:0}
+.ms .k{font:500 11px/1.6 var(--mono);color:var(--muted);
+  font-variant-numeric:tabular-nums}
+.ms .d{font-size:13.5px;line-height:1.55}
+.ms .d em{display:block;font-style:normal;font-size:12px;color:var(--muted);
+  margin-top:3px}
+.ms .v{font:500 13px/1.6 var(--mono);font-variant-numeric:tabular-nums;
+  white-space:nowrap}
+.ms-sum{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:14px;
+  font:500 12px/1.6 var(--mono);color:var(--muted)}
+.ms-sum b{color:var(--ink)}
+
+/* ---- footer ---- */
+.lp-foot{border-top:1px solid var(--line);background:var(--panel)}
+.lp-foot .lp{display:flex;flex-wrap:wrap;gap:18px 40px;padding-top:30px;
+  padding-bottom:40px}
+.lp-foot .col{min-width:0}
+.lp-foot h4{font:600 10px/1 var(--mono);letter-spacing:.13em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 11px}
+.lp-foot a{display:block;font-size:13.5px;line-height:1.9;color:var(--ink);
+  text-decoration:none}
+.lp-foot a:hover{color:var(--accent)}
+.lp-foot .say{max-width:44ch;font-size:12.5px;line-height:1.6;color:var(--muted)}
+.lp-foot .say b{color:var(--ink);font-weight:600}
 </style>
 </head>
 <body>
 
-<style>
-.sitebar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;
-  max-width:1180px;margin:0 auto;padding:10px 20px 0;
-  font:500 12px/1 var(--mono);color:var(--muted)}
-.sitebar a{color:var(--muted);text-decoration:none;
-  border-bottom:1px solid var(--line)}
-.sitebar a:hover{color:var(--accent);border-color:var(--accent)}
-.sitebar .sep{opacity:.4}
-</style>
-<nav class="sitebar">
-  <a href="https://github.com/let-the-dreamers-rise/dormant">source</a>
-  <span class="sep">/</span>
-  <a href="https://github.com/let-the-dreamers-rise/dormant/blob/main/GRANT.md">funding proposal</a>
-  <span class="sep">/</span>
-  <a href="https://github.com/let-the-dreamers-rise/dormant/blob/main/measurement/PARSING-GAP.md">the measurements</a>
-  <span class="sep">/</span>
-  <span>MIT, runs entirely in your browser</span>
-</nav>
+<div class="lp-top">
+  <div class="lp">
+    <a class="lp-mark" href="#top">dormant<i>.</i></a>
+    <nav class="lp-nav">
+      <a href="#demo">Live tool</a>
+      <a href="#evidence">Evidence</a>
+      <a href="#different">What exists already</a>
+      <a href="#why">Why fund it</a>
+      <a href="#scope">Scope</a>
+      <a href="https://github.com/let-the-dreamers-rise/dormant">Source</a>
+    </nav>
+    <button type="button" class="themebtn" id="theme">theme</button>
+  </div>
+</div>
 
+<div class="lp-hero" id="top">
+  <div class="lp">
+    <div>
+      <p class="lp-eye">Open instruction semantics for Solana &middot; MIT</p>
+      <h1>Solana can tell you which program ran. Nothing tells you what it
+        did.</h1>
+      <p class="lp-lede">Every wallet, explorer, indexer and simulator on this
+        chain needs to turn instruction bytes into a statement of effect. Today
+        each of them rebuilds a partial, private answer, and 36.2% of mainnet
+        instructions defeat all of them. Dormant is the open dataset of effect
+        semantics for the programs that carry most of mainnet, plus a reference
+        decoder that reads them.
+        <b>The decoder below is not a screenshot. It is the library, running in
+        this page, with no server behind it.</b></p>
+      <div class="lp-cta">
+        <a class="lp-btn solid" href="#demo">Read a transaction</a>
+        <a class="lp-btn wire" href="https://github.com/let-the-dreamers-rise/dormant">Source and tests</a>
+      </div>
+      <ul class="lp-facts">
+        <li><b>1,172</b>mainnet transactions decoded,<br>0 failures</li>
+        <li><b>36.2%</b>of mainnet instructions<br>no RPC can name</li>
+        <li><b>0.0000%</b>false-alarm rate over<br>10,336 signable transactions</li>
+      </ul>
+    </div>
 
-<div class="wrap">
-<header>
-  <h1>dormant<span>.</span></h1>
-  <p class="tag">Paste an unsigned Solana transaction. It tells you, offline, what signing it hands over.</p>
-  <button type="button" class="themebtn" id="theme">theme</button>
-</header>
+    <figure class="chain">
+      <figcaption class="chain-cap">Why a name is not an answer</figcaption>
+      <div class="chain-row"><span class="chain-k">program</span>
+        <span class="chain-v"><code>BPFLoaderUpgradeab1e11111111111111111111111</code></span></div>
+      <div class="chain-row"><span class="chain-k">tag</span>
+        <span class="chain-v"><code>04</code><span class="chain-ar">&rarr;</span><code class="hi">SetAuthority</code></span></div>
+      <div class="chain-row"><span class="chain-k">account 0</span>
+        <span class="chain-v"><code>program data</code><span class="flag w">writable</span></span></div>
+      <div class="chain-row"><span class="chain-k">account 1</span>
+        <span class="chain-v"><code>current authority</code><span class="flag s">signs</span></span></div>
+      <div class="chain-row"><span class="chain-k">account 2</span>
+        <span class="chain-v"><code>new authority</code><span class="flag n">does not sign</span></span></div>
+      <p class="chain-out"><b>the gap</b>Every existing parser stops at the word
+        <code>SetAuthority</code>. None of them records that account 2 gains
+        permanent control, or that tag 4 does not require it to sign while tag 7
+        does. That distinction is one byte wide, it is absent from the IDL, and
+        it is the kind of fact this dataset is made of.</p>
+    </figure>
+  </div>
+</div>
 
-<div class="cols">
+<div class="lp-demo" id="demo">
+  <div class="lp">
+    <div class="lp-head">
+      <span class="lp-live">Live &middot; nothing leaves this page</span>
+      <h2 class="lp-h">Read one yourself.</h2>
+      <p class="lp-sub">This is the library, compiled to JavaScript and running
+        in your browser. Paste a base64 transaction or pick an example. There is
+        no server, no RPC call and no telemetry &mdash; disconnect from the
+        network and it still works. <b>Public address only. Never paste a
+        private key anywhere, including here.</b></p>
+    </div>
+    <div class="cols">
   <div class="rail">
     <div>
       <p class="eyebrow">Base64 transaction</p>
@@ -222,14 +452,181 @@ footer code{font-family:var(--mono);font-size:11.5px}
 
   <section class="verdict" id="out" aria-live="polite"></section>
 </div>
+  </div>
+</div>
 
-<footer>
-  <b>Nothing leaves this page.</b> The decoder and the semantics library run in
-  your browser; there is no server, no RPC call, and no telemetry. Paste an
-  <b>unsigned</b> transaction &mdash; the base64 your wallet or squads.so shows you
-  before you approve. Never paste a private key, here or anywhere.
-  <br>Python library, tests and the measurement code: <code>python -m dormant &lt;base64&gt;</code>.
-</footer>
+<div class="lp">
+
+<section class="lp-sec" id="evidence">
+  <div class="lp-head">
+    <p class="eyebrow">Measured, not asserted</p>
+    <h2 class="lp-h">Most of what happens on Solana cannot be read by the tools
+      that watch it.</h2>
+  </div>
+  <div class="lp-two">
+    <div class="lp-prose">
+      <p>I sampled live mainnet blocks and asked one question of every
+        instruction: can a stock RPC node, with <code>jsonParsed</code> on, say
+        what this does? Across two independent runs, <b>36.2% and 42.1% of
+        instructions came back opaque</b> &mdash; a program id and an
+        undifferentiated blob of bytes. In the conservative run, <b>87.6% of
+        transactions contained at least one</b>.</p>
+      <p>Those numbers are deliberately unflattering to my own argument.
+        Vote traffic is excluded, because it is 57% of a block and nobody signs
+        it. ComputeBudget is excluded, because it was 43% of the apparent gap
+        and is natively decoded. Leaving both in would have let me claim 56%.
+        The denominator is the part of this that is easy to cheat, so it is the
+        part I wrote down first.</p>
+      <p>The ladder on the right is what closing it is worth. Caching every
+        published IDL is real progress and it is not enough, because <b>15 of
+        the 25 busiest programs publish no IDL at all</b>.</p>
+    </div>
+
+    <figure class="ladder">
+      <figcaption class="ladder-t">Instructions legible, by method</figcaption>
+      <div class="bar">
+        <div class="bar-l"><span>Stock RPC, <code>jsonParsed</code></span><b>63.8%</b></div>
+        <div class="bar-t"><div class="bar-f" style="width:63.8%"></div></div>
+      </div>
+      <div class="bar">
+        <div class="bar-l"><span>&#43; every on-chain IDL cached</span><b>80.7%</b></div>
+        <div class="bar-t"><div class="bar-f" style="width:80.7%"></div></div>
+      </div>
+      <div class="bar">
+        <div class="bar-l"><span>&#43; effect semantics, top 25 programs</span><b>93.1%</b></div>
+        <div class="bar-t"><div class="bar-f" style="width:93.1%"></div></div>
+      </div>
+      <div class="ladder-ax"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+      <p class="ladder-n">Share of non-vote, non-ComputeBudget mainnet
+        instructions. The third rung is what this grant buys.</p>
+    </figure>
+  </div>
+</section>
+
+<section class="lp-sec" id="different">
+  <div class="lp-head">
+    <p class="eyebrow">Prior art</p>
+    <h2 class="lp-h">Decoding Solana instructions is a solved problem. Saying
+      what they do is not.</h2>
+    <p class="lp-sub">Several teams already turn bytes into names, and some do it
+      very well. None of them publishes the effect of an instruction, or the
+      condition that effect depends on. That is the whole of what I am proposing
+      to build, and it is why this is not a reimplementation.</p>
+  </div>
+  <div class="lp-scroll">
+    <table class="lp-t">
+      <thead><tr><th>Project</th><th>What it does</th><th>What it does not do</th></tr></thead>
+      <tbody>
+        <tr><td>Helius</td><td>Decodes 3,600&#43; programs into named, typed events. Commercial, hosted.</td><td class="no">Names the call. Does not state what signing it transfers, or under what condition.</td></tr>
+        <tr><td>Shyft</td><td>Free open-source IDL parser and transaction API.</td><td class="no">Bounded by published IDLs &mdash; silent on the 15 programs that publish none.</td></tr>
+        <tr><td>deBridge</td><td>Open-source Anchor IDL decoding used in production.</td><td class="no">Same IDL ceiling. No effect model, no precondition.</td></tr>
+        <tr><td>Solscan</td><td>Human-readable explorer views of confirmed transactions.</td><td class="no">After the fact, and online. Cannot read an unsigned payload before you sign it.</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="gaps">
+    <div class="gap">
+      <h3>An IDL names; it never states effect</h3>
+      <p>An IDL will tell you an instruction is called <code>set_authority</code>
+        and takes three accounts. It does not say that account 2 gains permanent
+        control, or that <b>nothing requires account 2 to sign</b>. That gap is
+        not a tooling oversight &mdash; the information is simply not in the
+        file.</p>
+    </div>
+    <div class="gap">
+      <h3>15 of the top 25 publish no IDL</h3>
+      <p>I derived the Anchor IDL account for each of the 25 busiest programs and
+        checked the chain. Ten publish one; fifteen do not. Those fifteen are
+        <b>12.4% of all mainnet instruction volume</b> &mdash; invisible to every
+        IDL-based parser above, and reachable only by reverse engineering.</p>
+    </div>
+  </div>
+</section>
+
+<section class="lp-sec" id="why">
+  <div class="lp-head">
+    <p class="eyebrow">The obvious objection</p>
+    <h2 class="lp-h">Anyone could copy this. That is the point of funding it.</h2>
+  </div>
+  <div class="lp-two">
+    <div class="lp-prose">
+      <p>There is no moat here and there is not supposed to be one. The output
+        is MIT, the dumps are free, and the API has no key. If this work were
+        defensible I should be raising venture money instead of asking a
+        foundation for a grant.</p>
+      <p><b>The money does not buy code. It buys twenty weeks of reverse
+        engineering.</b> Ten of the twenty-five busiest programs publish an
+        on-chain IDL and are comparatively cheap. The other fifteen publish
+        nothing and have to be recovered from instruction data and observed
+        state changes, one program at a time. That labour is copyable in
+        principle and has not happened in practice &mdash; which is exactly why
+        12.4% of mainnet instruction volume is still unreadable.</p>
+      <p>It is also not a hypothetical want. The Foundation published its own
+        Discriminator Database RFP at $60,000, so the need is already priced and
+        still unmet. I am proposing to deliver against it for $45,000 with the
+        measurement of the gap already done, published, and reproducible by you
+        in ten minutes.</p>
+      <p>What accrues afterwards is not ownership. It is a maintained dataset
+        and somebody who knows these twenty-five programs well enough to keep it
+        correct as they ship new versions.</p>
+    </div>
+    <div>
+      <p class="eyebrow">Who consumes a semantics dataset</p>
+      <ul class="uses">
+        <li><b>Wallets</b>Say what a transaction does <span>before</span> the signature, instead of showing a base58 blob and a confirm button.</li>
+        <li><b>Explorers</b>Render history as statements of effect rather than as program ids and hex.</li>
+        <li><b>Indexers</b>Emit labelled economic events without hand-writing a parser per protocol.</li>
+        <li><b>Simulators and risk engines</b>Reason about what a pending transaction would change, not merely which programs it touches.</li>
+        <li><b>Security reviewers</b>The narrow case this started as, and the smallest of the five.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="lp-sec" id="scope">
+  <div class="lp-head">
+    <p class="eyebrow">Scope and funding</p>
+    <h2 class="lp-h">Five milestones, twenty weeks, and a number you can check
+      without me.</h2>
+    <p class="lp-sub">Each milestone is accepted against a figure you generate
+      yourself by running one script against a public endpoint, with no API key,
+      in about ten minutes. <b>The predicted number is written down in advance,
+      so a miss is visible rather than explained.</b></p>
+  </div>
+  <ol class="ms">
+    <li><span class="k">Week 2</span><span class="d">All 25 programs identified by protocol and classified by IDL availability, published as a table.<em>Script reads about 64% of instructions legible.</em></span><span class="v">$9,000</span></li>
+    <li><span class="k">Week 6</span><span class="d">6 of 25 programs modelled, tested and merged.<em>Script reads about 73%.</em></span><span class="v">$9,000</span></li>
+    <li><span class="k">Week 10</span><span class="d">13 of 25 programs modelled, tested and merged.<em>Script reads about 82%.</em></span><span class="v">$9,000</span></li>
+    <li><span class="k">Week 15</span><span class="d">20 of 25 programs modelled, tested and merged.<em>Script reads about 89%.</em></span><span class="v">$9,000</span></li>
+    <li><span class="k">Week 20</span><span class="d">25 of 25, plus JSON and Parquet dumps, a queryable API, and an independent review published in full including anything unfixed.<em>Script reads about 93%.</em></span><span class="v">$9,000</span></li>
+  </ol>
+  <p class="ms-sum"><span><b>$45,000</b> total</span><span>$1,200 &times; 10 programs that publish an IDL</span><span>$2,200 &times; 15 that must be reverse-engineered</span><span>MIT, no exclusivity</span></p>
+</section>
+
+</div>
+
+<div class="lp-foot">
+  <div class="lp">
+    <div class="col">
+      <h4>Project</h4>
+      <a href="https://github.com/let-the-dreamers-rise/dormant">Source on GitHub</a>
+      <a href="https://github.com/let-the-dreamers-rise/dormant/blob/main/GRANT.md">Funding proposal</a>
+      <a href="https://github.com/let-the-dreamers-rise/dormant/blob/main/measurement/PARSING-GAP.md">The measurements</a>
+    </div>
+    <div class="col">
+      <h4>Reproduce</h4>
+      <a href="https://github.com/let-the-dreamers-rise/dormant/blob/main/measurement/parsing_gap.py">measurement/parsing_gap.py</a>
+      <a href="https://github.com/let-the-dreamers-rise/dormant/blob/main/measurement/idl_availability.py">measurement/idl_availability.py</a>
+      <a href="https://github.com/let-the-dreamers-rise/dormant/tree/main/tests">Test suite</a>
+    </div>
+    <div class="col say">
+      <h4>Safety</h4>
+      <p style="margin:0">Dormant reads unsigned transactions and public
+        addresses. <b>Never paste a private key or seed phrase anywhere</b> —
+        not here, not into any tool that asks. MIT licensed. No analytics, no
+        network calls, no accounts.</p>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -889,6 +1286,5 @@ $("#theme").addEventListener("click", () => {
 $("#in").value = SAMPLES[0].b64;
 run();
 </script>
-
 </body>
 </html>

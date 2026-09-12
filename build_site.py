@@ -1,63 +1,45 @@
-"""Wrap the Artifact fragment into a standalone page for GitHub Pages.
+"""Compose the public site from the landing page and the tool fragment.
 
-`dormant/web/index.html` is authored as a fragment: the Artifact host injects
-the doctype, head and body around it. GitHub Pages does not, so serving it
-directly would render as text. This produces `docs/index.html`, which is the
-same tool inside a real document, with a bar linking back to the source and the
-funding proposal.
+`dormant/web/index.html` is authored as an Artifact fragment: the host injects
+the doctype, head and body, so the page is only the tool. A reviewer needs more
+than a paste box, but the tool has to stay live on the page -- a screenshot of a
+decoder proves nothing. So this lifts the working parts out of the fragment
+(its CSS, its input rail and verdict panel, its script) and sets them inside
+`site/page.html`, which carries the argument around them.
 
-Generated, not edited. Change `dormant/web/index.html` and re-run.
+One source of truth for the tool, one for the prose, one generated artefact.
 
     python build_site.py
 """
 
 from pathlib import Path
 
-SRC = Path("dormant/web/index.html")
+FRAGMENT = Path("dormant/web/index.html")
+PAGE = Path("site/page.html")
 OUT = Path("docs/index.html")
-REPO = "https://github.com/let-the-dreamers-rise/dormant"
 
-fragment = SRC.read_text(encoding="utf-8")
-head, _, body = fragment.partition("</style>")
+fragment = FRAGMENT.read_text(encoding="utf-8")
 
-BAR = """
-<style>
-.sitebar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;
-  max-width:1180px;margin:0 auto;padding:10px 20px 0;
-  font:500 12px/1 var(--mono);color:var(--muted)}
-.sitebar a{color:var(--muted);text-decoration:none;
-  border-bottom:1px solid var(--line)}
-.sitebar a:hover{color:var(--accent);border-color:var(--accent)}
-.sitebar .sep{opacity:.4}
-</style>
-<nav class="sitebar">
-  <a href="%(repo)s">source</a>
-  <span class="sep">/</span>
-  <a href="%(repo)s/blob/main/GRANT.md">funding proposal</a>
-  <span class="sep">/</span>
-  <a href="%(repo)s/blob/main/measurement/PARSING-GAP.md">the measurements</a>
-  <span class="sep">/</span>
-  <span>MIT, runs entirely in your browser</span>
-</nav>
-""" % {"repo": REPO}
+css = fragment.partition("<style>")[2].partition("</style>")[0]
 
-doc = (
-    "<!doctype html>\n"
-    '<html lang="en">\n<head>\n'
-    '<meta charset="utf-8">\n'
-    '<meta name="viewport" content="width=device-width,initial-scale=1">\n'
-    '<meta name="description" content="Paste an unsigned Solana transaction '
-    'and read, offline and in your browser, exactly what signing it hands '
-    'over.">\n'
-    "<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}"
-    "</style>\n"
-    + head + "</style>\n"
-    "</head>\n<body>\n"
-    + BAR
-    + body
-    + "\n</body>\n</html>\n"
-)
+# Only the working part: the input rail and the verdict panel. The fragment's
+# own masthead and footer are replaced by the page's.
+after_cols = fragment.partition('<div class="cols">')[2]
+demo = '<div class="cols">' + after_cols.partition("<footer>")[0].rstrip()
+
+js = "<script>" + fragment.partition("<script>")[2].rstrip()
+
+if not (css and demo and js):
+    raise SystemExit("could not split %s into css/markup/script" % FRAGMENT)
+
+page = PAGE.read_text(encoding="utf-8")
+for marker, value in (("/*TOOL_CSS*/", css),
+                      ("<!--TOOL_DEMO-->", demo),
+                      ("<!--TOOL_JS-->", js)):
+    if marker not in page:
+        raise SystemExit("marker missing from %s: %s" % (PAGE, marker))
+    page = page.replace(marker, value, 1)
 
 OUT.parent.mkdir(exist_ok=True)
-OUT.write_text(doc, encoding="utf-8")
-print("wrote %s (%d bytes)" % (OUT, len(doc)))
+OUT.write_text(page, encoding="utf-8")
+print("wrote %s (%d bytes)" % (OUT, len(page)))
