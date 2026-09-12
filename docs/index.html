@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Paste an unsigned Solana transaction and read, offline and in your browser, exactly what signing it hands over.">
+<style>body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Dormant</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --ground:#eef1f1; --panel:#ffffff; --sunk:#e4e9e9;
+  --ink:#0b1214; --muted:#5a6a6e; --line:#d3dbdb; --line-soft:#e2e8e8;
+  --accent:#0a6b70; --accent-soft:#d9eaea;
+  --crit:#9e2a1c; --crit-bg:#fbeae7;
+  --note:#7a5200; --note-bg:#faf0dd;
+  --ok:#2a6245;  --ok-bg:#e4efe9;
+  --unk:#4b5a63;  --unk-bg:#e6eaec;
+  --sans:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  --r:3px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --ground:#0c1113; --panel:#131a1c; --sunk:#0a0f11;
+  --ink:#dce4e5; --muted:#82969a; --line:#243033; --line-soft:#1b2426;
+  --accent:#2fa3a8; --accent-soft:#11292b;
+  --crit:#f2705d; --crit-bg:#2a1512;
+  --note:#d79b2b; --note-bg:#261c0c;
+  --ok:#57a97c;  --ok-bg:#10231a;
+  --unk:#7d9099;  --unk-bg:#182022;
+}}
+:root[data-theme="dark"]{
+  --ground:#0c1113; --panel:#131a1c; --sunk:#0a0f11;
+  --ink:#dce4e5; --muted:#82969a; --line:#243033; --line-soft:#1b2426;
+  --accent:#2fa3a8; --accent-soft:#11292b;
+  --crit:#f2705d; --crit-bg:#2a1512;
+  --note:#d79b2b; --note-bg:#261c0c;
+  --ok:#57a97c;  --ok-bg:#10231a;
+  --unk:#7d9099;  --unk-bg:#182022;
+}
+
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.wrap{max-width:1180px;margin:0 auto;padding:28px 20px 64px;
+  display:flex;flex-direction:column;gap:22px}
+
+/* ---- masthead ---- */
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;
+  border-bottom:1px solid var(--line);padding-bottom:14px}
+h1{font-family:var(--mono);font-size:20px;font-weight:600;letter-spacing:-.01em;
+  margin:0;color:var(--ink)}
+h1 span{color:var(--accent)}
+.tag{font-size:13.5px;color:var(--muted);max-width:56ch}
+.themebtn{margin-left:auto;font:500 11px/1 var(--mono);letter-spacing:.08em;
+  text-transform:uppercase;color:var(--muted);background:none;
+  border:1px solid var(--line);border-radius:var(--r);padding:6px 10px;cursor:pointer}
+.themebtn:hover{color:var(--ink);border-color:var(--accent)}
+
+/* ---- two-column ---- */
+.cols{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:940px){.cols{grid-template-columns:minmax(0,1fr)}
+  .rail{order:2}.verdict{order:1}}
+.rail{display:flex;flex-direction:column;gap:16px}
+
+.eyebrow{font:600 10.5px/1 var(--mono);letter-spacing:.13em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 8px}
+
+textarea{width:100%;min-height:132px;resize:vertical;background:var(--sunk);
+  color:var(--ink);border:1px solid var(--line);border-radius:var(--r);
+  padding:11px 12px;font-family:var(--mono);font-size:12px;line-height:1.65;
+  word-break:break-all}
+textarea::placeholder{color:var(--muted)}
+.row{display:flex;gap:8px;margin-top:10px}
+button.go{flex:1;background:var(--accent);color:#fff;border:0;border-radius:var(--r);
+  padding:10px 14px;font:600 13px/1 var(--sans);cursor:pointer}
+button.go:hover{filter:brightness(1.1)}
+button.ghost{background:none;color:var(--muted);border:1px solid var(--line);
+  border-radius:var(--r);padding:10px 12px;font:500 13px/1 var(--sans);cursor:pointer}
+button.ghost:hover{color:var(--ink);border-color:var(--accent)}
+
+.samples{display:flex;flex-direction:column;gap:1px;background:var(--line-soft);
+  border:1px solid var(--line-soft);border-radius:var(--r);overflow:hidden}
+.samples button{display:flex;align-items:baseline;gap:8px;width:100%;text-align:left;
+  background:var(--panel);border:0;padding:9px 11px;cursor:pointer;color:var(--ink);
+  font:400 13px/1.35 var(--sans)}
+.samples button:hover{background:var(--accent-soft)}
+.samples button b{font:600 13px/1.35 var(--sans)}
+.samples button i{font-style:normal;margin-left:auto;font:500 10px/1 var(--mono);
+  letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;padding-top:2px}
+
+/* ---- base rates ---- */
+.rates{border:1px solid var(--line);border-radius:var(--r);background:var(--panel);
+  padding:13px 14px}
+.rates dl{margin:0;display:grid;grid-template-columns:1fr auto;gap:7px 12px;
+  font-family:var(--mono);font-size:12px}
+.rates dt{color:var(--muted)}
+.rates dd{margin:0;text-align:right;font-variant-numeric:tabular-nums;font-weight:500}
+.rates dd.zero{color:var(--accent);font-weight:600}
+.rates p{margin:10px 0 0;font-size:11.5px;line-height:1.5;color:var(--muted)}
+
+/* ---- verdict ---- */
+.verdict{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+  border-left:5px solid var(--stripe,var(--unk));overflow:hidden}
+.verdict[data-level="CRITICAL"]{--stripe:var(--crit)}
+.verdict[data-level="NOTICE"]{--stripe:var(--note)}
+.verdict[data-level="SAFE"]{--stripe:var(--ok)}
+.verdict[data-level="UNKNOWN"]{--stripe:var(--unk)}
+.vhead{padding:17px 20px 16px;border-bottom:1px solid var(--line-soft)}
+.pill{display:inline-block;font:600 10px/1 var(--mono);letter-spacing:.13em;
+  text-transform:uppercase;padding:5px 8px;border-radius:2px;margin-bottom:10px}
+.pill.CRITICAL{background:var(--crit-bg);color:var(--crit)}
+.pill.NOTICE{background:var(--note-bg);color:var(--note)}
+.pill.SAFE{background:var(--ok-bg);color:var(--ok)}
+.pill.UNKNOWN{background:var(--unk-bg);color:var(--unk)}
+.headline{margin:0;font-size:17.5px;font-weight:600;line-height:1.4;text-wrap:balance}
+.subline{margin:9px 0 0;font-size:13.5px;color:var(--muted);max-width:70ch}
+
+.meta{display:flex;flex-wrap:wrap;gap:0 26px;padding:11px 20px;
+  border-bottom:1px solid var(--line-soft);font-family:var(--mono);font-size:11.5px}
+.meta span{color:var(--muted)}
+.meta span b{color:var(--ink);font-weight:500}
+
+ol.ixs{list-style:none;margin:0;padding:0}
+li.ix{display:grid;grid-template-columns:auto 1fr;gap:0 14px;
+  padding:14px 20px;border-bottom:1px solid var(--line-soft)}
+li.ix:last-child{border-bottom:0}
+.n{font:500 11px/1.7 var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.ixbody{min-width:0;display:flex;flex-direction:column;gap:6px}
+.op{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px}
+.op code{font-family:var(--mono);font-size:13px;font-weight:500;word-break:break-all}
+.chip{font:600 9.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;
+  padding:4px 6px;border-radius:2px}
+.chip.CRITICAL{background:var(--crit-bg);color:var(--crit)}
+.chip.NOTICE{background:var(--note-bg);color:var(--note)}
+.chip.SAFE{background:var(--ok-bg);color:var(--ok)}
+.chip.UNKNOWN{background:var(--unk-bg);color:var(--unk)}
+.say{margin:0;font-size:13.5px;line-height:1.55;max-width:74ch}
+.cond{font-family:var(--mono);font-size:11.5px;color:var(--muted);line-height:1.5}
+.cond b{color:var(--ink);font-weight:500;letter-spacing:.06em;text-transform:uppercase;
+  font-size:10px;margin-right:5px}
+.accts{display:flex;flex-wrap:wrap;gap:5px;margin-top:1px}
+.acct{font:400 10.5px/1 var(--mono);padding:4px 6px;border-radius:2px;
+  background:var(--sunk);color:var(--muted);border:1px solid transparent}
+.acct.s{border-color:var(--accent);color:var(--ink)}
+.acct.w::after{content:"\00a0w";color:var(--note);font-weight:600}
+.acct.s::before{content:"signs\00a0";color:var(--accent);font-weight:600}
+.acct.lut{border-style:dashed;border-color:var(--line)}
+
+.err{padding:16px 20px;font-family:var(--mono);font-size:12.5px;color:var(--crit);
+  line-height:1.6}
+
+footer{border-top:1px solid var(--line);padding-top:14px;font-size:12.5px;
+  color:var(--muted);line-height:1.6;max-width:82ch}
+footer b{color:var(--ink);font-weight:600}
+footer code{font-family:var(--mono);font-size:11.5px}
+</style>
+</head>
+<body>
+
+<style>
+.sitebar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;
+  max-width:1180px;margin:0 auto;padding:10px 20px 0;
+  font:500 12px/1 var(--mono);color:var(--muted)}
+.sitebar a{color:var(--muted);text-decoration:none;
+  border-bottom:1px solid var(--line)}
+.sitebar a:hover{color:var(--accent);border-color:var(--accent)}
+.sitebar .sep{opacity:.4}
+</style>
+<nav class="sitebar">
+  <a href="https://github.com/let-the-dreamers-rise/dormant">source</a>
+  <span class="sep">/</span>
+  <a href="https://github.com/let-the-dreamers-rise/dormant/blob/main/GRANT.md">funding proposal</a>
+  <span class="sep">/</span>
+  <a href="https://github.com/let-the-dreamers-rise/dormant/blob/main/measurement/PARSING-GAP.md">the measurements</a>
+  <span class="sep">/</span>
+  <span>MIT, runs entirely in your browser</span>
+</nav>
+
+
+<div class="wrap">
+<header>
+  <h1>dormant<span>.</span></h1>
+  <p class="tag">Paste an unsigned Solana transaction. It tells you, offline, what signing it hands over.</p>
+  <button type="button" class="themebtn" id="theme">theme</button>
+</header>
+
+<div class="cols">
+  <div class="rail">
+    <div>
+      <p class="eyebrow">Base64 transaction</p>
+      <textarea id="in" spellcheck="false" aria-label="Base64-encoded Solana transaction"></textarea>
+      <div class="row">
+        <button type="button" class="go" id="run">Analyse</button>
+        <button type="button" class="ghost" id="clear">Clear</button>
+      </div>
+    </div>
+
+    <div>
+      <p class="eyebrow">Example payloads</p>
+      <div class="samples" id="samples"></div>
+    </div>
+
+    <div class="rates">
+      <p class="eyebrow">Measured base rates</p>
+      <dl>
+        <dt>durable nonce alone</dt><dd>8.14%</dd>
+        <dt>control transfer alone</dt><dd>0.14%</dd>
+        <dt>both, one transaction</dt><dd class="zero">0.0000%</dd>
+        <dt>programs modelled here</dt><dd>7.8%</dd>
+      </dl>
+      <p>Over 10,336 signable mainnet transactions. The conjunction never once
+      occurred honestly, which is why it &mdash; not the nonce &mdash; is the alarm.
+      The last row is the honest coverage figure: everything else returns
+      <em>unknown</em>, never <em>safe</em>.</p>
+    </div>
+  </div>
+
+  <section class="verdict" id="out" aria-live="polite"></section>
+</div>
+
+<footer>
+  <b>Nothing leaves this page.</b> The decoder and the semantics library run in
+  your browser; there is no server, no RPC call, and no telemetry. Paste an
+  <b>unsigned</b> transaction &mdash; the base64 your wallet or squads.so shows you
+  before you approve. Never paste a private key, here or anywhere.
+  <br>Python library, tests and the measurement code: <code>python -m dormant &lt;base64&gt;</code>.
+</footer>
+</div>
+
+<script>
+/* ===================================================================
+   wire -- Solana transaction decoding, no dependencies.
+   A port of dormant/wire.py. Validated at 100.00% on 1,172 real
+   mainnet transactions (legacy and v0, with and without lookup
+   tables). Anything that fails to decode is reported as a failure,
+   never as an empty result.
+   =================================================================== */
+const B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+function b58encode(bytes){
+  let pad = 0;
+  while (pad < bytes.length && bytes[pad] === 0) pad++;
+  const digits = [];   // must start EMPTY: a seeded 0 appends a 33rd '1' to
+  for (let i = pad; i < bytes.length; i++){   // the all-zero System address
+    let carry = bytes[i];
+    for (let j = 0; j < digits.length; j++){
+      carry += digits[j] << 8;
+      digits[j] = carry % 58;
+      carry = (carry / 58) | 0;
+    }
+    while (carry > 0){ digits.push(carry % 58); carry = (carry / 58) | 0; }
+  }
+  let s = "1".repeat(pad);
+  for (let i = digits.length - 1; i >= 0; i--) s += B58[digits[i]];
+  return s || "1";
+}
+
+function b64decode(text){
+  const clean = text.replace(/\s+/g, "");
+  if (!clean) throw new Error("empty input");
+  const bin = atob(clean);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+/* A cursor that refuses to read past the end. Silent truncation is how a
+   decoder reports a malformed transaction as a harmless one. */
+class Cursor {
+  constructor(buf){ this.buf = buf; this.i = 0; }
+  take(n){
+    if (this.i + n > this.buf.length)
+      throw new Error("truncated: wanted " + n + " bytes at offset " + this.i +
+                      ", only " + (this.buf.length - this.i) + " remain");
+    const out = this.buf.subarray(this.i, this.i + n);
+    this.i += n;
+    return out;
+  }
+  u8(){ return this.take(1)[0]; }
+  /* compact-u16 (ShortVec): 7 bits per byte, little-endian, max 3 bytes. */
+  compact(){
+    let val = 0, shift = 0;
+    for (let k = 0; k < 3; k++){
+      const b = this.u8();
+      val |= (b & 0x7f) << shift;
+      if ((b & 0x80) === 0) return val;
+      shift += 7;
+    }
+    throw new Error("compact-u16 longer than three bytes");
+  }
+  key(){ return b58encode(this.take(32)); }
+}
+
+function decode(raw){
+  const c = new Cursor(raw);
+  const nSigs = c.compact();
+  c.take(64 * nSigs);                       // signatures, discarded
+
+  let version = "legacy";
+  const first = c.buf[c.i];
+  if (first !== undefined && (first & 0x80) !== 0){
+    version = "v" + (c.u8() & 0x7f);
+  }
+
+  const numRequiredSignatures = c.u8();
+  const numReadonlySigned     = c.u8();
+  const numReadonlyUnsigned   = c.u8();
+
+  const nKeys = c.compact();
+  const staticKeys = [];
+  for (let i = 0; i < nKeys; i++) staticKeys.push(c.key());
+
+  const blockhash = c.key();
+
+  const nIx = c.compact();
+  const rawIx = [];
+  for (let i = 0; i < nIx; i++){
+    const programIdx = c.u8();
+    const nAcc = c.compact();
+    const accIdx = Array.from(c.take(nAcc));
+    const dLen = c.compact();
+    rawIx.push({ programIdx, accIdx, data: c.take(dLen) });
+  }
+
+  /* v0 address lookup tables. The addresses themselves live on chain and are
+     NOT in this payload -- we can name the table and the index, and nothing
+     more. Pretending otherwise would be the worst kind of lie for this tool,
+     so these are marked unresolved and every rule that touches one degrades
+     to UNKNOWN. */
+  const lookups = [];
+  if (version !== "legacy"){
+    const nLut = c.compact();
+    for (let i = 0; i < nLut; i++){
+      const table = c.key();
+      const wl = c.compact(), wr = Array.from(c.take(wl));
+      const rl = c.compact(), rd = Array.from(c.take(rl));
+      lookups.push({ table, writable: wr, readonly: rd });
+    }
+  }
+
+  /* Resolved account order: static keys, then every writable lookup entry in
+     table order, then every readonly one. */
+  const keys = staticKeys.map(k => ({ pubkey: k, unresolved: false }));
+  for (const l of lookups)
+    for (const idx of l.writable)
+      keys.push({ pubkey: "lookup:" + l.table.slice(0,4) + "#" + idx,
+                  unresolved: true, writableLut: true });
+  for (const l of lookups)
+    for (const idx of l.readonly)
+      keys.push({ pubkey: "lookup:" + l.table.slice(0,4) + "#" + idx,
+                  unresolved: true, writableLut: false });
+
+  const nStatic = staticKeys.length;
+  const nWritableLut = lookups.reduce((a,l) => a + l.writable.length, 0);
+
+  function flags(i){
+    const signer = i < numRequiredSignatures;
+    let writable;
+    if (i < nStatic){
+      writable = signer
+        ? i < numRequiredSignatures - numReadonlySigned
+        : i < nStatic - numReadonlyUnsigned;
+    } else {
+      writable = (i - nStatic) < nWritableLut;   // lookup entries, writable first
+    }
+    return { signer, writable };
+  }
+
+  const accounts = keys.map((k, i) => Object.assign({}, k, flags(i)));
+
+  const instructions = rawIx.map(ix => ({
+    program: accounts[ix.programIdx] ? accounts[ix.programIdx].pubkey : "?",
+    programUnresolved: accounts[ix.programIdx]
+      ? accounts[ix.programIdx].unresolved : true,
+    accounts: ix.accIdx.map(i => accounts[i] ||
+      ({ pubkey:"?", unresolved:true, signer:false, writable:false })),
+    data: ix.data
+  }));
+
+  return { version, blockhash, accounts, instructions,
+           signers: accounts.filter(a => a.signer).map(a => a.pubkey),
+           lookups, trailing: raw.length - c.i };
+}
+
+/* ===================================================================
+   semantics -- what each instruction does to account state, and under
+   what condition. A port of dormant/semantics.py. This file is the
+   asset: an engine is a weekend, knowing what programs actually do is
+   years, and every program added here widens what can be analysed.
+   =================================================================== */
+const SYSTEM  = "11111111111111111111111111111111";
+const TOKEN   = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA";
+const TOKEN22 = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb";
+const LOADER  = "BPFLoaderUpgradeab1e11111111111111111111111";
+const STAKE   = "Stake11111111111111111111111111111111111111";
+const VOTE    = "Vote111111111111111111111111111111111111111";
+const ATA     = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
+const CBUDGET = "ComputeBudget111111111111111111111111111111";
+const MEMO    = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
+const MEMO_L  = "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo";
+const SAFE="SAFE", NOTICE="NOTICE", CRITICAL="CRITICAL", UNKNOWN="UNKNOWN";
+
+const PROGRAM_NAMES = {
+  [SYSTEM]:"System", [TOKEN]:"SPL Token", [TOKEN22]:"Token-2022",
+  [LOADER]:"BPF Loader (upgradeable)", [STAKE]:"Stake", [VOTE]:"Vote",
+  [ATA]:"Associated Token Account", [CBUDGET]:"Compute Budget",
+  [MEMO]:"Memo", [MEMO_L]:"Memo (legacy)"
+};
+
+function short(k){
+  if (!k) return "an unnamed account";
+  if (k.startsWith("lookup:")) return k;
+  return k.length <= 12 ? k : k.slice(0,4) + ".." + k.slice(-4);
+}
+function acct(ix, i){
+  const n = ix.accounts.length;
+  const j = i < 0 ? n + i : i;
+  return (j >= 0 && j < n) ? short(ix.accounts[j].pubkey) : "?";
+}
+function u32(d, off){
+  off = off || 0;
+  if (d.length < off + 4) return null;
+  return (d[off] | (d[off+1]<<8) | (d[off+2]<<16) | (d[off+3]<<24)) >>> 0;
+}
+function u64(d, off){
+  if (d.length < off + 8) return null;
+  let v = 0n;
+  for (let i = 7; i >= 0; i--) v = (v << 8n) | BigInt(d[off+i]);
+  return v.toString();
+}
+function F(verdict, operation, statement, precondition, program, evaluated){
+  return { verdict, operation, statement,
+           precondition: precondition === undefined ? "true" : precondition,
+           program: program || "",
+           evaluated: evaluated === undefined ? true : evaluated,
+           get unconditional(){ return this.precondition === "true"; } };
+}
+
+/* An instruction tag this library does not recognise. Modelling a program is
+   not the same as modelling every instruction in it -- programs add
+   instructions and this file lags. Returning SAFE for a tag we cannot name
+   would be the same mistake as returning SAFE for a program we have never
+   seen, one level down and considerably easier to miss. */
+function unknownTag(program, label, tag){
+  return F(UNKNOWN, label + ".unknown(" + tag + ")",
+    "Instruction " + tag + " of " + label + " is not in the semantics " +
+    "library. Its effect cannot be determined offline — this is NOT a " +
+    "statement that it is safe.", "unknown", program);
+}
+
+/* THE PRECONDITION THAT IS ACTUALLY COMPUTED.
+   Protocols rotate authority constantly. In an ordinary rotation the party
+   taking control also signs: they are present, and they consented in the same
+   transaction. Firing CRITICAL on those trains people to click through, which
+   is the habituation that made blind signing normal. When the recipient does
+   NOT sign, control leaves the room -- nobody here speaks for the address
+   about to own it. That is the Drift shape: the attackers were never signers,
+   they were destinations. */
+function authorityFinding(program, operation, subject, newAuth, ctx, extra){
+  const target = short(newAuth);
+  const present = ctx && newAuth && ctx.signers.has(newAuth);
+  if (present)
+    return F(NOTICE, operation,
+      "Moves authority over " + subject + " to " + target + ", which also " +
+      "SIGNS this transaction — both parties are present. " + extra,
+      "new authority " + target + " is a signer here", program, true);
+  return F(CRITICAL, operation,
+    "Moves authority over " + subject + " to " + target + ", which does NOT " +
+    "sign this transaction. Control leaves the room: nobody here speaks for " +
+    "the address about to hold it. " + extra,
+    "new authority " + target + " is not a signer of this transaction",
+    program, true);
+}
+
+const SYSTEM_OPS = {0:"CreateAccount",1:"Assign",2:"Transfer",
+  3:"CreateAccountWithSeed",4:"AdvanceNonceAccount",5:"WithdrawNonceAccount",
+  6:"InitializeNonceAccount",7:"AuthorizeNonceAccount",8:"Allocate",
+  9:"AllocateWithSeed",10:"AssignWithSeed",11:"TransferWithSeed",
+  12:"UpgradeNonceAccount"};
+
+function system(ix, ctx){
+  const tag = u32(ix.data);
+  if (!(tag in SYSTEM_OPS)) return unknownTag(SYSTEM, "System", tag);
+  const name = SYSTEM_OPS[tag];
+  if (tag === 4)
+    return F(NOTICE, "System.AdvanceNonceAccount",
+      "Durable nonce. This transaction DOES NOT EXPIRE — it stays valid " +
+      "until someone submits it, which may be months from now, against a " +
+      "state you cannot see. Nonce account " + acct(ix,0) + ", authority " +
+      acct(ix,2) + ".", "true", SYSTEM);
+  if (tag === 7)
+    return authorityFinding(SYSTEM, "System.AuthorizeNonceAccount",
+      "nonce account " + acct(ix,0),
+      ix.accounts.length > 2 ? ix.accounts[2].pubkey : "", ctx,
+      "The holder can mint further non-expiring transactions.");
+  if (tag === 1 || tag === 10)
+    return F(CRITICAL, "System." + name,
+      "Reassigns account " + acct(ix,0) + " to a different owning program. " +
+      "The new owner may rewrite its data freely.", "true", SYSTEM);
+  if (tag === 5)
+    return F(CRITICAL, "System.WithdrawNonceAccount",
+      "Withdraws lamports from nonce account " + acct(ix,0) + " to " +
+      acct(ix,1) + ".", "true", SYSTEM);
+  if (tag === 2 || tag === 11){
+    const lam = u64(ix.data, 4);
+    return F(NOTICE, "System." + name,
+      "Transfers " + (lam === null ? "?" : lam) + " lamports from " +
+      acct(ix,0) + " to " + acct(ix,1) + ".", "true", SYSTEM);
+  }
+  return F(SAFE, "System." + name,
+    "No authority change and no unbounded outflow.", "true", SYSTEM);
+}
+
+const TOKEN_OPS = {0:"InitializeMint",1:"InitializeAccount",3:"Transfer",
+  4:"Approve",5:"Revoke",6:"SetAuthority",7:"MintTo",8:"Burn",
+  9:"CloseAccount",10:"FreezeAccount",11:"ThawAccount",12:"TransferChecked",
+  13:"ApproveChecked",14:"MintToChecked",15:"BurnChecked",17:"SyncNative",
+  18:"InitializeAccount3"};
+const AUTHORITY_TYPES = {0:"MintTokens",1:"FreezeAccount",2:"AccountOwner",
+  3:"CloseAccount"};
+
+function token(ix, program, ctx){
+  if (!ix.data.length)
+    return F(SAFE, "Token.empty", "No instruction data.", "true", program);
+  const tag = ix.data[0];
+  if (!(tag in TOKEN_OPS)) return unknownTag(program, "Token", tag);
+  const name = TOKEN_OPS[tag];
+
+  if (tag === 6){
+    const kind = AUTHORITY_TYPES[ix.data.length > 1 ? ix.data[1] : -1] || "?";
+    const hasNew = ix.data.length > 2 && ix.data[2] === 1;
+    if (!hasNew)
+      return F(CRITICAL, "Token.SetAuthority",
+        "Removes " + kind + " authority over " + acct(ix,0) +
+        " permanently. No state can undo this.", "true", program);
+    const newAuth = ix.data.length >= 35 ? b58encode(ix.data.subarray(3,35)) : "";
+    return authorityFinding(program, "Token.SetAuthority",
+      kind + " of " + acct(ix,0), newAuth, ctx, "");
+  }
+  if (tag === 4 || tag === 13)
+    return authorityFinding(program, "Token." + name,
+      "spending on token account " + acct(ix,0),
+      ix.accounts.length > 1 ? ix.accounts[1].pubkey : "", ctx,
+      "A delegate may move funds later with no further signature from you.");
+  if (tag === 9)
+    return F(NOTICE, "Token.CloseAccount",
+      "Closes token account " + acct(ix,0) + " and sends its rent to " +
+      acct(ix,1) + ".", "true", program);
+  if (tag === 3 || tag === 12)
+    return F(NOTICE, "Token." + name,
+      "Moves tokens from " + acct(ix,0) + " to " + acct(ix, tag===3 ? -1 : 2) +
+      ".", "balance of " + acct(ix,0) + " at execution time", program, false);
+  if (tag === 7 || tag === 14)
+    return F(CRITICAL, "Token." + name,
+      "Mints new supply of " + acct(ix,0) + " into " + acct(ix,1) + ".",
+      "true", program);
+  if (tag === 10)
+    return F(CRITICAL, "Token.FreezeAccount",
+      "Freezes token account " + acct(ix,0) + ".", "true", program);
+  return F(SAFE, "Token." + name, "No authority change.", "true", program);
+}
+
+const LOADER_OPS = {0:"InitializeBuffer",1:"Write",2:"DeployWithMaxDataLen",
+  3:"Upgrade",4:"SetAuthority",5:"Close",6:"ExtendProgram",
+  7:"SetAuthorityChecked"};
+
+function loader(ix, ctx){
+  const tag = u32(ix.data);
+  if (!(tag in LOADER_OPS))
+    return unknownTag(LOADER, "BPFLoaderUpgradeable", tag);
+  const name = LOADER_OPS[tag];
+  if (tag === 4 || tag === 7)
+    return authorityFinding(LOADER, "BPFLoaderUpgradeable." + name,
+      "UPGRADE AUTHORITY of program data " + acct(ix,0),
+      ix.accounts.length > 2 ? ix.accounts[2].pubkey : "", ctx,
+      "Whoever holds it can replace the program's code, and therefore " +
+      "control every account the program owns.");
+  if (tag === 3)
+    return F(CRITICAL, "BPFLoaderUpgradeable.Upgrade",
+      "REPLACES THE CODE of program " + acct(ix,1) +
+      " with the contents of buffer " + acct(ix,2) + ".", "true", LOADER);
+  if (tag === 5)
+    return F(CRITICAL, "BPFLoaderUpgradeable.Close",
+      "Closes program account " + acct(ix,0) + ", rendering it unusable.",
+      "true", LOADER);
+  return F(SAFE, "BPFLoaderUpgradeable." + name,
+    "No authority or code change.", "true", LOADER);
+}
+
+const STAKE_OPS = {0:"Initialize",1:"Authorize",2:"DelegateStake",3:"Split",
+  4:"Withdraw",5:"Deactivate",6:"SetLockup",7:"Merge",8:"AuthorizeWithSeed"};
+
+function stake(ix, ctx){
+  const tag = u32(ix.data);
+  if (!(tag in STAKE_OPS)) return unknownTag(STAKE, "Stake", tag);
+  const name = STAKE_OPS[tag];
+  if (tag === 1 || tag === 8){
+    const newAuth = ix.data.length >= 36 ? b58encode(ix.data.subarray(4,36)) : "";
+    return authorityFinding(STAKE, "Stake." + name,
+      "stake account " + acct(ix,0), newAuth, ctx,
+      "The holder controls where this stake and its rewards go.");
+  }
+  if (tag === 4)
+    return F(NOTICE, "Stake.Withdraw",
+      "Withdraws from stake account " + acct(ix,0) + " to " + acct(ix,1) + ".",
+      "true", STAKE);
+  return F(SAFE, "Stake." + name, "No authority change.", "true", STAKE);
+}
+
+const VOTE_OPS = {0:"InitializeAccount",1:"Authorize",2:"Vote",3:"Withdraw",
+  4:"UpdateValidatorIdentity",5:"UpdateCommission",6:"VoteSwitch",
+  7:"AuthorizeChecked",8:"UpdateVoteState",9:"UpdateVoteStateSwitch",
+  10:"AuthorizeWithSeed",11:"AuthorizeCheckedWithSeed",
+  12:"CompactUpdateVoteState",13:"CompactUpdateVoteStateSwitch",
+  14:"TowerSync",15:"TowerSyncSwitch"};
+const VOTE_CONSENSUS = new Set([2,6,8,9,12,13,14,15]);
+
+function vote(ix, ctx){
+  const tag = u32(ix.data);
+  if (!(tag in VOTE_OPS)) return unknownTag(VOTE, "Vote", tag);
+  const name = VOTE_OPS[tag];
+  if (tag === 1 || tag === 7 || tag === 10 || tag === 11){
+    const newAuth = ix.data.length >= 36 ? b58encode(ix.data.subarray(4,36)) : "";
+    return authorityFinding(VOTE, "Vote." + name,
+      "vote account " + acct(ix,0), newAuth, ctx,
+      "The holder controls the validator's stake rewards.");
+  }
+  if (tag === 3)
+    return F(CRITICAL, "Vote.Withdraw",
+      "Withdraws lamports from vote account " + acct(ix,0) + " to " +
+      acct(ix,1) + ".", "true", VOTE);
+  if (tag === 4)
+    return F(CRITICAL, "Vote.UpdateValidatorIdentity",
+      "Reassigns the validator identity of vote account " + acct(ix,0) + ".",
+      "true", VOTE);
+  if (tag === 5)
+    return F(NOTICE, "Vote.UpdateCommission",
+      "Changes commission on vote account " + acct(ix,0) + ".", "true", VOTE);
+  if (VOTE_CONSENSUS.has(tag))
+    return F(SAFE, "Vote." + name,
+      "Consensus housekeeping. Moves no value and changes no authority.",
+      "true", VOTE);
+  return F(NOTICE, "Vote." + name, "Vote account maintenance.", "true", VOTE);
+}
+
+function ata(ix){
+  const tag = ix.data.length ? ix.data[0] : 0;
+  if (tag === 0)
+    return F(SAFE, "AssociatedToken.Create",
+      "Creates the associated token account for " + acct(ix,2) +
+      ". Grants no authority over existing funds.", "true", ATA);
+  if (tag === 1)
+    return F(SAFE, "AssociatedToken.CreateIdempotent",
+      "Creates the associated token account for " + acct(ix,2) +
+      " if it does not already exist.", "true", ATA);
+  if (tag === 2)
+    return F(NOTICE, "AssociatedToken.RecoverNested",
+      "Recovers funds from a nested associated token account into " +
+      acct(ix,2) + ".", "true", ATA);
+  return unknownTag(ATA, "AssociatedToken", tag);
+}
+
+function memo(ix, program){
+  let text;
+  try { text = new TextDecoder("utf-8", {fatal:true}).decode(ix.data).slice(0,60); }
+  catch (e){ text = "<non-utf8>"; }
+  return F(SAFE, "Memo",
+    "Attaches a note; touches no account state. “" + text + "”",
+    "true", program);
+}
+
+/* An unmodelled program returns UNKNOWN, never SAFE. Reporting silence as
+   safety is how a tool like this gets people hurt, and the census says this
+   branch is taken for the large majority of real traffic. */
+function analyseInstruction(ix, ctx){
+  if (ix.programUnresolved)
+    return F(UNKNOWN, "unresolvable",
+      "The program for this instruction is supplied by an address lookup " +
+      "table. Its address is on chain, not in this payload, so it cannot be " +
+      "identified offline — this is NOT a statement that it is safe.",
+      "unknown", ix.program);
+  const p = ix.program;
+  if (p === SYSTEM) return system(ix, ctx);
+  if (p === TOKEN || p === TOKEN22) return token(ix, p, ctx);
+  if (p === LOADER) return loader(ix, ctx);
+  if (p === STAKE) return stake(ix, ctx);
+  if (p === VOTE) return vote(ix, ctx);
+  if (p === ATA) return ata(ix);
+  if (p === MEMO || p === MEMO_L) return memo(ix, p);
+  if (p === CBUDGET)
+    return F(SAFE, "ComputeBudget",
+      "Changes fees and limits only; touches no account state.", "true", p);
+  return F(UNKNOWN, "unmodelled",
+    "Program " + short(p) + " is not in the semantics library. Its effect " +
+    "cannot be determined offline — this is NOT a statement that it is " +
+    "safe.", "unknown", p);
+}
+
+function analyse(tx){
+  const ctx = { signers: new Set(tx.signers),
+                accounts: new Set(tx.accounts.map(a => a.pubkey)) };
+  const findings = tx.instructions.map(ix => analyseInstruction(ix, ctx));
+  const durableNonce = tx.instructions.length > 0 &&
+    tx.instructions[0].program === SYSTEM && u32(tx.instructions[0].data) === 4;
+  const crits = findings.filter(f => f.verdict === CRITICAL);
+  const unks  = findings.filter(f => f.verdict === UNKNOWN);
+  /* A durable nonce AND a transfer of control, in one transaction. Measured
+     over 10,336 signable mainnet transactions: nonce alone 8.1366%, control
+     transfer alone 0.1354%, BOTH together 0.0000% -- not once. */
+  const drift = durableNonce && crits.length > 0;
+  let level = SAFE;
+  if (crits.length) level = CRITICAL;
+  else if (unks.length) level = UNKNOWN;
+  else if (findings.some(f => f.verdict === NOTICE)) level = NOTICE;
+  return { tx, findings, durableNonce, crits, unks, drift, level };
+}
+
+function headline(r){
+  if (r.drift)
+    return ["STOP. This transaction transfers control and never expires.",
+      "Both at once. In 10,336 signable mainnet transactions that combination " +
+      "never occurred honestly — not once. A durable nonce means it can " +
+      "sit unsubmitted for months and then execute against a state you cannot " +
+      "see today. This is the shape of the Drift transactions."];
+  if (r.crits.length){
+    const open = r.crits.filter(f => !f.evaluated || f.precondition === "unknown");
+    if (r.crits.every(f => f.unconditional))
+      return ["Dangerous unconditionally.",
+        "Nothing about the chain's state changes this: " +
+        r.crits.map(f => f.operation).join(", ") + "."];
+    if (!open.length)
+      return ["Dangerous — " + r.crits[0].precondition + ".",
+        "That condition was checked against this payload, not assumed. " +
+        r.crits.length + " critical " +
+        (r.crits.length === 1 ? "finding" : "findings") + " below."];
+    return ["Dangerous whenever: " +
+      r.crits.map(f => f.precondition).join("; ") + ".", ""];
+  }
+  if (r.unks.length)
+    return ["Cannot be read offline.",
+      r.unks.length + " of " + r.findings.length + " instructions use a " +
+      "program or instruction this library does not model. That is not a " +
+      "clean bill of health — it is the absence of one. Do not sign on " +
+      "the strength of this screen alone."];
+  if (r.durableNonce)
+    return ["No transfer of control, but it never expires.",
+      "A durable nonce is ordinary on its own — 8.14% of mainnet " +
+      "traffic. Nothing here hands anything over. Worth knowing that it can " +
+      "be submitted at any future time."];
+  if (r.findings.some(f => f.verdict === NOTICE))
+    return ["Nothing here transfers control.",
+      "Every instruction is modelled and none of them moves authority over " +
+      "an account or a program. Read the value movements below."];
+  return ["Nothing here transfers control or moves value.",
+    "Every instruction is modelled and every one is inert with respect to " +
+    "authority and balances."];
+}
+
+/* ===================================================================
+   render
+   =================================================================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g,
+  c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function renderAccounts(ix){
+  return ix.accounts.map(a => {
+    const cls = ["acct"];
+    if (a.signer) cls.push("s");
+    if (a.writable) cls.push("w");
+    if (a.unresolved) cls.push("lut");
+    return '<span class="' + cls.join(" ") + '">' + esc(short(a.pubkey)) +
+           "</span>";
+  }).join("");
+}
+
+function render(r){
+  const [h, sub] = headline(r);
+  const tx = r.tx;
+  const modelled = r.findings.filter(f => f.verdict !== UNKNOWN).length;
+
+  const rows = r.findings.map((f, i) => {
+    const ix = tx.instructions[i];
+    const pname = PROGRAM_NAMES[ix.program] ||
+                  (ix.programUnresolved ? "from lookup table" : short(ix.program));
+    const condLabel = f.precondition === "true" ? ""
+      : (f.evaluated && f.precondition !== "unknown" ? "checked" : "depends on");
+    return '<li class="ix">' +
+      '<span class="n">' + String(i).padStart(2, "0") + "</span>" +
+      '<div class="ixbody">' +
+        '<div class="op"><code>' + esc(f.operation) + "</code>" +
+          '<span class="chip ' + f.verdict + '">' + f.verdict + "</span>" +
+          '<span class="cond">' + esc(pname) + "</span></div>" +
+        '<p class="say">' + esc(f.statement) + "</p>" +
+        (condLabel
+          ? '<div class="cond"><b>' + condLabel + "</b>" +
+            esc(f.precondition) + "</div>" : "") +
+        '<div class="accts">' + renderAccounts(ix) + "</div>" +
+      "</div></li>";
+  }).join("");
+
+  $("#out").dataset.level = r.level;
+  $("#out").innerHTML =
+    '<div class="vhead">' +
+      '<span class="pill ' + r.level + '">' +
+        (r.drift ? "critical &middot; drift signature" : r.level.toLowerCase()) +
+      "</span>" +
+      '<p class="headline">' + esc(h) + "</p>" +
+      (sub ? '<p class="subline">' + esc(sub) + "</p>" : "") +
+    "</div>" +
+    '<div class="meta">' +
+      "<span>message <b>" + esc(tx.version) + "</b></span>" +
+      "<span>instructions <b>" + tx.instructions.length + "</b></span>" +
+      "<span>modelled <b>" + modelled + "/" + r.findings.length + "</b></span>" +
+      "<span>signers <b>" + tx.signers.length + "</b></span>" +
+      "<span>accounts <b>" + tx.accounts.length + "</b></span>" +
+      "<span>expires <b>" + (r.durableNonce ? "never" : "~2 min") + "</b></span>" +
+    "</div>" +
+    '<ol class="ixs">' + rows + "</ol>";
+}
+
+function run(){
+  const text = $("#in").value;
+  if (!text.trim()){
+    $("#out").dataset.level = UNKNOWN;
+    $("#out").innerHTML = '<div class="err">Nothing to read. Paste a ' +
+      "base64 transaction, or pick an example.</div>";
+    return;
+  }
+  try {
+    render(analyse(decode(b64decode(text))));
+  } catch (e){
+    $("#out").dataset.level = UNKNOWN;
+    $("#out").innerHTML = '<div class="err">Could not decode this as a ' +
+      "Solana transaction: " + esc(e.message) + "<br><br>The decoder reports " +
+      "a failure rather than an empty result on purpose. A tool that " +
+      "silently returned &lsquo;nothing found&rsquo; here would read as a " +
+      "clean bill of health.</div>";
+  }
+}
+
+/* Four real payloads, decodable and analysable, built by the same test
+   fixtures that back the Python library. Examples, not anyone's live
+   transactions. */
+const SAMPLES = [
+  { name:"Drift signature", note:"critical",
+    desc:"Durable nonce plus an upgrade-authority handover to a non-signer.",
+    b64:"AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAIIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACqPaRToihsOIQFT73Y64rAMK5PRbBJNLAU3oQBIAAAMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIAgYDAQIDBAQAAAAHAwECAwQEAAAA" },
+  { name:"Ordinary rotation", note:"notice",
+    desc:"The same handover, but the new authority signs. Both parties present.",
+    b64:"AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAIIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYCqPaRToihsOIQFT73Y64rAMK5PRbBJNLAU3oQBIAAAMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIAQcDAgMBBAQAAAA=" },
+  { name:"Delegate to a stranger", note:"critical",
+    desc:"Token approval to an address that never signs — a standing claim.",
+    b64:"AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAIIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYG3fbh12Whk9nL4UbO63msHLSF7V9bN5E6jPWFfv8AqcjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIAQcDAQMCCQQAypo7AAAAAA==" },
+  { name:"Plain SOL transfer", note:"notice",
+    desc:"0.00025 SOL, one instruction, nothing handed over.",
+    b64:"AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAIIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIAQcCAQIMAgAAAJDQAwAAAAAA" }
+];
+
+$("#samples").innerHTML = SAMPLES.map((s, i) =>
+  '<button type="button" data-i="' + i + '"><span><b>' + esc(s.name) +
+  "</b><br>" + esc(s.desc) + '</span><i class="chip ' +
+  (s.note === "critical" ? "CRITICAL" : "NOTICE") + '">' + esc(s.note) +
+  "</i></button>").join("");
+
+$("#samples").addEventListener("click", e => {
+  const b = e.target.closest("button[data-i]");
+  if (!b) return;
+  $("#in").value = SAMPLES[+b.dataset.i].b64;
+  run();
+});
+$("#run").addEventListener("click", run);
+$("#clear").addEventListener("click", () => { $("#in").value = ""; run(); });
+$("#in").addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") run();
+});
+$("#theme").addEventListener("click", () => {
+  const dark = matchMedia("(prefers-color-scheme: dark)").matches;
+  const cur = document.documentElement.dataset.theme || (dark ? "dark" : "light");
+  document.documentElement.dataset.theme = cur === "dark" ? "light" : "dark";
+});
+
+/* Open in a working state: the shape this exists to catch, already read. */
+$("#in").value = SAMPLES[0].b64;
+run();
+</script>
+
+</body>
+</html>
