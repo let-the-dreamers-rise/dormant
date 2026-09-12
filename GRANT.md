@@ -9,19 +9,33 @@ the end.*
 
 ## The thirty-second version
 
-**Roughly four in ten instructions executing on Solana mainnet cannot be read by
-the RPC parser every developer already has.** They appear in the large majority
-of transactions. I measured this twice, over live mainnet, because the
-Foundation's own Discriminator Database RFP said the problem was real and
-earmarked $60,000 for it -- and nobody had published its size.
+**Naming Solana instructions is a solved problem. Saying what they do is not.**
 
-**The hole is bounded.** Twenty-five programs take the network from ~64% legible
-to ~93%. Both runs agree within a point.
+Helius decodes 3,600+ programs from their on-chain IDLs. Shyft and deBridge ship
+free, open-source parsers that do the same. Any claim that Solana transactions
+are unreadable should be met with those three products, and this proposal does
+not make that claim.
 
-**I am asking for $45,000 to model those twenty-five programs and publish the
-dataset.** They are named by program ID below. Five milestones, each accepted
-against a number you generate yourself, with the predicted number written down
-in advance so a miss is visible.
+All three are **IDL-driven**, and that leaves two structural gaps:
+
+**1. Fifteen of the twenty-five busiest opaque programs publish no IDL at all.**
+Measured, not assumed. Helius states it "falls back to raw data and raw
+accounts" for programs it cannot decode. Those fifteen are **12.4% of all
+mainnet instruction volume**, they are disproportionately AMMs and launchpads,
+and reaching them requires hand-written parsers that nobody has published.
+
+**2. An IDL names; it never states effect.** It tells you an instruction is
+`set_authority` taking an account named `new_authority`. It does not tell you
+that `new_authority` never signs this transaction, so control is leaving the
+room with nobody present to speak for it. That is the question a signer, an
+indexer or a monitor actually needs answered, and **no IDL-derived tool answers
+it for any program** -- including the ten in this list with excellent IDLs.
+
+**I am asking for $45,000 to write effect semantics for the twenty-five busiest
+opaque programs, and to publish the result as a free, MIT dataset.** They are
+named by program ID below. Five milestones, each accepted against a number you
+generate yourself, with the predicted number written in advance so a miss is
+visible.
 
 ---
 
@@ -80,20 +94,31 @@ As shares of all mainnet instructions:
 | 1 | + caching every on-chain IDL | **80.7%** |
 | 2 | + semantics for the top 25 | **93.1%** |
 
-**Level 1 is a weekend's work and it is worth 17 points.** If naming were the
-goal, a caching script would be the right thing to fund and this proposal would
-be the wrong one.
+**Level 1 is not hypothetical and it is not a weekend's work I am offering to
+do. It is a shipped product, three times over.** Helius decodes 3,600+ programs
+from their on-chain IDLs on its paid plans; Shyft and deBridge publish free,
+open-source IDL parsers. If naming were the goal, the ecosystem is already
+served and this proposal should be declined.
 
-Two things survive it. **Fifteen of the twenty-five publish nothing** -- 12.4%
-of all mainnet instruction volume, which no caching reaches, and they are
-disproportionately AMMs and launchpads. **And an IDL names; it never states
-effect.** It tells you an instruction is `set_authority` with an account named
-`new_authority`. It does not tell you that `new_authority` never signs the
-transaction and that control is therefore leaving the room. That is unsolved
-for all 25 programs, including the ten with excellent IDLs.
+That is the honest state of the art, and it is why this proposal is not about
+legibility in general. Two things survive it, and both are structural
+consequences of every existing tool being IDL-driven.
 
-Level 1 answers *what is this called*. Level 2 answers *what will this do to
-me*. Only the second is what this proposal builds.
+**Fifteen of the twenty-five publish no IDL.** Helius states it "falls back to
+raw data and raw accounts" for programs it cannot decode, and an IDL parser with
+no IDL has nothing to parse. Those fifteen are **12.4% of all mainnet
+instruction volume**. Reaching them means hand-written parsers, per program,
+which is work somebody has to do and nobody has published.
+
+**And an IDL names; it never states effect.** It tells you an instruction is
+`set_authority` with an account named `new_authority`. It does not tell you that
+`new_authority` never signs the transaction and that control is therefore
+leaving the room. That is unsolved for all 25 programs, including the ten with
+excellent IDLs, and it is unsolved by Helius, Shyft and deBridge alike -- they
+deserialize arguments, which is a different and easier thing.
+
+Level 1 answers *what is this called*, and is done. Level 2 answers *what will
+this do to me*, and is what this proposal builds.
 
 ---
 
@@ -209,6 +234,52 @@ Real work, deliberately excluded because I cannot promise the result:
   STOP, and that the shape occurred 0 times in 10,336 signable mainnet
   transactions.
 - **Integration into a signing workflow**, which needs a partner who wants it.
+
+---
+
+## What happens if I stop
+
+I am one person, and for a dataset meant to be depended on, maintenance matters
+more than delivery. Pretending otherwise would be the weakest part of this
+proposal, so here is how it is structured against that.
+
+**The output is data, not a service.** Semantics are plain declarative entries
+-- program, instruction discriminant, account roles, effect -- published as JSON
+and Parquet under MIT. If I disappear, they keep working. Nothing expires,
+nothing needs a server of mine, nothing is behind an API key of mine. That is a
+deliberate difference from every commercial parser in this space.
+
+**Each program is independently useful.** There is no all-or-nothing artefact.
+Twelve programs modelled is twelve programs of coverage that the ecosystem keeps
+regardless of what happens to the remaining thirteen, and `parsing_gap.py`
+reports exactly how much was gained.
+
+**The contribution path is the same one I use.** The ranked queue is generated,
+not curated; the acceptance test is a script, not my judgement. Anyone who wants
+to add the 26th program runs the same command, meets the same four conditions,
+and opens a pull request. Bus factor is a property of processes that live in
+one person's head, and this one deliberately does not.
+
+**On being a student.** Milestone 4 lands in a period that may overlap exams,
+and I would rather say so than discover it. The schedule is five milestones at
+five-week intervals rather than a single twenty-week block precisely so slippage
+is visible early and priced at one tranche, not five.
+
+---
+
+## Prior art, accurately
+
+| | what it does | licence |
+|---|---|---|
+| **Helius** Parsed Events | decodes 3,600+ programs from their on-chain IDLs; falls back to raw data for the rest | paid, closed, open beta |
+| **Shyft** transaction parser | IDL-based parsing plus hand-written parsers for System, Token, ATA | open source, free |
+| **deBridge** transaction parser | decodes arbitrary instructions from an IDL or a custom scheme | open source, free |
+| **Solscan / explorers** | display parsed instructions for programs they have registered | closed |
+
+All of them name instructions and deserialize arguments. None of them states an
+instruction's effect on account state, and all of them are IDL-driven, so all of
+them degrade to raw bytes on the fifteen programs in this list that publish no
+IDL. That is the gap, and it is narrow on purpose.
 
 ---
 
