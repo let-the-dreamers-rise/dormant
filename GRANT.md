@@ -185,10 +185,12 @@ The acceptance test is a number you generate, not a claim I make.
 Five milestones, twenty weeks, $9,000 each. The last column is the number you
 run.
 
-| # | week | tranche | delivered | `parsing_gap.py` reads |
+Each tranche is **due upon completion** of its deliverable, not on signature.
+
+| # | week | tranche | deliverable | `parsing_gap.py` reads |
 |---|---|---|---|---|
-| 1 | 0 | $9,000 | on signature: all 25 identified by protocol, each classified IDL / no-IDL, published | ~64% |
-| 2 | 5 | $9,000 | 6 of 25 modelled, tested, merged | ~73% |
+| 1 | 2 | $9,000 | all 25 programs identified by protocol, each classified by IDL availability, published as a table | ~64% |
+| 2 | 6 | $9,000 | 6 of 25 modelled, tested, merged | ~73% |
 | 3 | 10 | $9,000 | 13 of 25 | ~82% |
 | 4 | 15 | $9,000 | 20 of 25 | ~89% |
 | 5 | 20 | $9,000 | 25 of 25, plus JSON and Parquet dumps, a queryable API, and an independent review published in full | ~93% |
@@ -196,10 +198,11 @@ run.
 The percentages are predictions from the cumulative curve already measured, and
 they are falsifiable. If milestone 3 reads 74% instead of 82%, I have missed.
 
-Exposure is one tranche at any time. If work stops after the first, the
-ecosystem keeps a published map of the 25 programs that matter and which of
-them can be read cheaply -- useful on its own, which is why milestone 1 is a
-deliverable rather than a retainer.
+Milestone 1 is deliberately short and early. It is two weeks of work, it is
+useful on its own -- a published map of which 25 programs carry the volume and
+which of them can be read cheaply does not exist today -- and it means the first
+payment is tied to something real rather than to a signature. Exposure is one
+tranche at any time.
 
 ---
 
