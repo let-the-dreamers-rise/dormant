@@ -601,6 +601,30 @@ table.lp-t{border-collapse:collapse;width:100%;min-width:620px;font-size:13.5px}
     <li><span class="k">Week 20</span><span class="d">25 of 25, plus JSON and Parquet dumps, a queryable API, and an independent review published in full including anything unfixed.<em>Script reads about 93%.</em></span><span class="v">$9,000</span></li>
   </ol>
   <p class="ms-sum"><span><b>$45,000</b> total</span><span>$1,200 &times; 10 programs that publish an IDL</span><span>$2,200 &times; 15 that must be reverse-engineered</span><span>MIT, no exclusivity</span></p>
+
+  <div class="lp-two" style="margin-top:34px">
+    <div class="lp-prose">
+      <p><b>Where the money goes.</b> The per-program prices above are how the
+        total was derived &mdash; tiered by a property I measured rather than
+        estimated. The table beside this is what it is actually spent on, so
+        both the derivation and the composition are on record.</p>
+      <p>Paid archival RPC is not optional for this work: recovering fifteen
+        undocumented programs means pulling large volumes of historical
+        transactions and replaying observed state changes, and public endpoints
+        rate-limit and drop large blocks &mdash; a failure I hit while running
+        the measurement that this proposal rests on.</p>
+      <p>The independent review is a real external cost and it is deliberate. A
+        semantics dataset that only I have checked is worth considerably less
+        than one somebody competent has tried to break, and the review is
+        published in full including anything it finds unfixed.</p>
+    </div>
+    <ul class="ms">
+      <li><span class="k">infra</span><span class="d">Paid archival RPC access, five months<em>Historical transaction pulls and state-change replay.</em></span><span class="v">$1,500</span></li>
+      <li><span class="k">infra</span><span class="d">Dataset hosting and the queryable API, first year<em>JSON and Parquet dumps, no key, no rate limit.</em></span><span class="v">$1,000</span></li>
+      <li><span class="k">review</span><span class="d">Independent third-party review of the semantics<em>Published in full at Milestone 5.</em></span><span class="v">$4,000</span></li>
+      <li><span class="k">labour</span><span class="d">Engineering time, 20 weeks full-time<em>About $1,925 per week, one person.</em></span><span class="v">$38,500</span></li>
+    </ul>
+  </div>
 </section>
 
 </div>

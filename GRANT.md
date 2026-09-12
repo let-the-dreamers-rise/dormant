@@ -5,6 +5,10 @@ document is produced by a script in this repository that you can run yourself,
 on a public endpoint, with no API key, in about ten minutes. The commands are at
 the end.*
 
+*The working decoder is at **<https://dormant-sigma.vercel.app>**, running in
+the browser with no server behind it. It is the reference implementation of what
+this proposal would extend to 25 programs, and it takes ten seconds to check.*
+
 ---
 
 ## The thirty-second version
@@ -214,9 +218,23 @@ tranche at any time.
 | 15 programs that publish nothing, reverse-engineered from instruction data and observed state changes, at $2,200 each | $33,000 |
 | **total** | **$45,000** |
 
-Dataset infrastructure, year-one hosting and the independent review are folded
-into the per-program prices. The budget is two lines on purpose: tiered by a
-property that was measured, not estimated.
+The budget is two lines on purpose: tiered by a property that was measured, not
+estimated. That is how the total was **derived**. What it is **spent on**:
+
+| line | amount |
+|---|---|
+| Paid archival RPC access, five months -- historical transaction pulls and state-change replay | $1,500 |
+| Dataset hosting and the queryable API, year one -- JSON and Parquet dumps, no key | $1,000 |
+| Independent third-party review of the semantics, published in full at Milestone 5 | $4,000 |
+| Engineering time, 20 weeks full-time, one person (~$1,925/week) | $38,500 |
+| **total** | **$45,000** |
+
+Paid archival RPC is not optional: recovering fifteen undocumented programs
+means pulling large volumes of historical transactions and replaying observed
+state changes, and public endpoints rate-limit and drop large blocks -- a
+failure hit while running the measurement this proposal rests on. The
+independent review is deliberate: a semantics dataset only I have checked is
+worth less than one somebody competent has tried to break.
 
 **The anchor.** The Discriminator Database RFP earmarked $60,000 to *name*
 instructions ecosystem-wide, with a UI, an API and a dump. This proposes what
@@ -301,8 +319,9 @@ front, so the free variables of a precondition are finite, named and known
 before execution. Ethereum's storage reads are discovered during execution, so
 the variable set cannot be bounded in advance.
 
-**Clear use of funds.** Two budget lines, a named list, a unit price tiered by a
-measured property, and a pass/fail test you run.
+**Clear use of funds.** A named list, a unit price tiered by a measured
+property, a stated split between external cost and engineering time, and a
+pass/fail test you run.
 
 ---
 

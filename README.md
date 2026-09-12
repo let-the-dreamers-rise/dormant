@@ -1,5 +1,9 @@
 # Dormant
 
+> **Live: [dormant-sigma.vercel.app](https://dormant-sigma.vercel.app)** -- the
+> decoder runs on that page, in your browser. No install, no wallet, no RPC, no
+> server behind it. It opens with a real transaction already read.
+>
 > **Solana Foundation reviewers:** the funding proposal is in
 > [`GRANT.md`](GRANT.md) -- the 25 programs by ID, the acceptance test, the
 > schedule, the budget, and the commands to verify every number yourself.
