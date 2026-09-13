@@ -89,6 +89,12 @@ def _u32(data: bytes, off: int = 0):
     return struct.unpack_from("<I", data, off)[0]
 
 
+def _u64(data: bytes, off: int = 0):
+    if len(data) < off + 8:
+        return None
+    return struct.unpack_from("<Q", data, off)[0]
+
+
 def _short(pubkey: str) -> str:
     # ASCII only: this text is read in terminals whose encoding we do not pick.
     return pubkey if len(pubkey) <= 12 else pubkey[:4] + ".." + pubkey[-4:]
@@ -278,14 +284,41 @@ def loader(ix, ctx=None) -> Finding:
         return _unknown_tag(LOADER_UPGRADEABLE, "BPFLoaderUpgradeable", tag)
     name = LOADER_OPS[tag]
 
-    if tag in (4, 7):
+    if tag == 4:
         new_auth = ix.accounts[2].pubkey if len(ix.accounts) > 2 else ""
         return _authority_finding(
-            LOADER_UPGRADEABLE, "BPFLoaderUpgradeable." + name,
+            LOADER_UPGRADEABLE, "BPFLoaderUpgradeable.SetAuthority",
             "UPGRADE AUTHORITY of program data %s" % _acct(ix, 0),
             new_auth, ctx,
             "Whoever holds it can replace the program's code, and therefore "
             "control every account the program owns.")
+
+    # Tag 7 is tag 4 with one difference, and the difference is the entire
+    # point of the instruction: the runtime REQUIRES the incoming authority to
+    # sign. Control cannot leave the room through this instruction, because a
+    # payload where it tried would be rejected before it executed. Grading it
+    # the same as tag 4 would be the alarmism this library is built to avoid --
+    # and one byte is all that separates the two on the wire.
+    if tag == 7:
+        new_auth = ix.accounts[2].pubkey if len(ix.accounts) > 2 else ""
+        target = _short(new_auth) if new_auth else "an unnamed account"
+        if _recipient_present(new_auth, ctx):
+            return Finding(
+                NOTICE, "BPFLoaderUpgradeable.SetAuthorityChecked",
+                "Moves UPGRADE AUTHORITY of program data %s to %s, which "
+                "signs this transaction. The checked variant will not accept "
+                "an authority that is absent, so both parties are present by "
+                "construction." % (_acct(ix, 0), target),
+                "new authority %s is a signer here" % target,
+                LOADER_UPGRADEABLE, True)
+        return Finding(
+            NOTICE, "BPFLoaderUpgradeable.SetAuthorityChecked",
+            "Names %s as the incoming UPGRADE AUTHORITY of program data %s, "
+            "but %s does not sign. The checked variant requires it to, so as "
+            "written this instruction cannot execute -- it fails rather than "
+            "hands anything over." % (target, _acct(ix, 0), target),
+            "new authority %s must sign for this to execute at all" % target,
+            LOADER_UPGRADEABLE, True)
     if tag == 3:
         return Finding(
             CRITICAL, "BPFLoaderUpgradeable.Upgrade",
@@ -406,6 +439,82 @@ def memo(ix, program: str) -> Finding:
                    "true", program)
 
 
+# --- pump.fun AMM ---------------------------------------------------------
+# The first program here that the RPC cannot name, and the top of the work
+# queue by instruction volume. Everything below was recovered from mainnet
+# rather than read out of a source file, by `measurement/discover.py`:
+#
+#   Operation names   The program's own runtime logs, attributed only in
+#                     transactions that ran exactly ONE real instruction of it,
+#                     so the mapping is unambiguous rather than correlational.
+#
+#   Argument layout   Tested, not assumed. If a 64-bit field is an amount, it
+#                     has to equal a balance change the ledger recorded. Over
+#                     five mainnet blocks the field at byte 8 matched an
+#                     observed delta in 96.6% of Buy instructions (140/145) and
+#                     73.9% of Sell (156/211); the field at byte 16 matched
+#                     4.1% and 0.5%. So offset 8 is the amount, and offset 16
+#                     is a bound the trade is permitted not to reach.
+#
+# Reproduce:
+#   python measurement/discover.py --program pAMMBay6... --blocks 5
+#   python measurement/discover.py --program pAMMBay6... --args 66063d1201daebea
+
+PUMP_AMM = "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA"
+
+# sha256("anchor:event")[:8]. Anchor emits structured events by having the
+# program invoke ITSELF with this discriminator, so an event appears in the
+# ledger as an ordinary instruction. It is fully half of this program's
+# apparent instruction volume and it changes no state -- which is worth saying
+# out loud, because a work queue that counts events as operations makes every
+# Anchor program look twice as big as it is.
+ANCHOR_EVENT = "e445a52e51cb9a1d"
+
+# discriminator -> (name, what the amount is, how the bound reads)
+PUMP_OPS = {
+    "66063d1201daebea": ("Buy", "receive", "spending at most"),
+    "c62e1552b4d9e870": ("BuyExactQuoteIn", "receive", "spending at most"),
+    "33e685a4017f83ad": ("Sell", "give up", "for at least"),
+}
+
+
+def pump_amm(ix, ctx=None) -> Finding:
+    disc = ix.data[:8].hex() if len(ix.data) >= 8 else ""
+
+    if disc == ANCHOR_EVENT:
+        return Finding(
+            SAFE, "pump.amm.event",
+            "An Anchor event: the program invoking itself to record what it "
+            "just did. Touches no account state.", "true", PUMP_AMM)
+
+    op = PUMP_OPS.get(disc)
+    if op is None:
+        return _unknown_tag(PUMP_AMM, "pump.amm", disc or "<no discriminator>")
+
+    name, direction, bound_word = op
+    amount, bound = _u64(ix.data, 8), _u64(ix.data, 16)
+    if amount is None:
+        return _unknown_tag(PUMP_AMM, "pump.amm", disc)
+
+    # Decimals live in the mint account, which is chain state this library
+    # refuses to assume. Raw units are the honest unit to print.
+    body = ("Swaps through a pump.fun AMM pool: you %s %s base units, %s %s "
+            "quote units."
+            % (direction, format(amount, ","), bound_word,
+               format(bound, ",") if bound is not None else "an unread bound"))
+
+    # The bound is the whole risk, and it is a condition on state that does not
+    # exist yet. A swap signed today executes at whatever the pool offers when
+    # it lands -- and if the payload also carries a durable nonce, "when it
+    # lands" may be months from now, against a pool nobody has seen.
+    return Finding(
+        NOTICE, "pump.amm." + name,
+        body + " The price is whatever the pool offers at execution; only "
+        "that bound constrains it.",
+        "pool price at execution stays within the stated bound",
+        PUMP_AMM, False)
+
+
 def analyse_instruction(ix, ctx=None) -> Finding:
     """The verdict for one instruction, or an explicit unknown.
 
@@ -428,6 +537,8 @@ def analyse_instruction(ix, ctx=None) -> Finding:
         return ata(ix)
     if p in (MEMO, MEMO_LEGACY):
         return memo(ix, p)
+    if p == PUMP_AMM:
+        return pump_amm(ix, ctx)
     if p == COMPUTE_BUDGET:
         return Finding(SAFE, "ComputeBudget", "Changes fees and limits only; "
                        "touches no account state.", "true", p)
@@ -439,4 +550,4 @@ def analyse_instruction(ix, ctx=None) -> Finding:
 
 
 MODELLED = {SYSTEM, TOKEN, TOKEN22, LOADER_UPGRADEABLE, STAKE, COMPUTE_BUDGET,
-            VOTE, ATA, MEMO, MEMO_LEGACY}
+            VOTE, ATA, MEMO, MEMO_LEGACY, PUMP_AMM}

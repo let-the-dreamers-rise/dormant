@@ -1,0 +1,139 @@
+{
+  "program": "EtrnLzgbS7nMMy5fbD42kXiUzGg8XQzJ972Xtk1cjWih",
+  "stats": {
+    "blocks": 5,
+    "skipped": 0,
+    "tx": 5173,
+    "failed": 381,
+    "hits": 236
+  },
+  "weighted_determinism": 1.0,
+  "operations": [
+    {
+      "discriminator": "2d9bc83425d6bb8c",
+      "count": 86,
+      "share": 0.3644067796610169,
+      "inner_share": 0.0,
+      "arity": 5,
+      "data_len": 43,
+      "roles": "----SW---W",
+      "roles_determinism": 1.0,
+      "shape": "..|..|d.|..|..",
+      "shape_determinism": 1.0,
+      "distinct_shapes": 1,
+      "logs": []
+    },
+    {
+      "discriminator": "f70786cbb5479947",
+      "count": 58,
+      "share": 0.2457627118644068,
+      "inner_share": 1.0,
+      "arity": 1,
+      "data_len": 34,
+      "roles": "--",
+      "roles_determinism": 1.0,
+      "shape": "..",
+      "shape_determinism": 1.0,
+      "distinct_shapes": 1,
+      "logs": []
+    },
+    {
+      "discriminator": "8de6d6f209d1cfaa",
+      "count": 58,
+      "share": 0.2457627118644068,
+      "inner_share": 1.0,
+      "arity": 1,
+      "data_len": 1154,
+      "roles": "--",
+      "roles_determinism": 1.0,
+      "shape": "..",
+      "shape_determinism": 1.0,
+      "distinct_shapes": 1,
+      "logs": []
+    },
+    {
+      "discriminator": "a4000efa3ac61918",
+      "count": 15,
+      "share": 0.0635593220338983,
+      "inner_share": 0.0,
+      "arity": 6,
+      "data_len": 721,
+      "roles": "------SW-W-W",
+      "roles_determinism": 1.0,
+      "shape": "..|..|..|d.|..|..",
+      "shape_determinism": 1.0,
+      "distinct_shapes": 1,
+      "logs": []
+    },
+    {
+      "discriminator": "f15b8baa1229cb16",
+      "count": 14,
+      "share": 0.059322033898305086,
+      "inner_share": 0.0,
+      "arity": 5,
+      "data_len": 682,
+      "roles": "----SW---W",
+      "roles_determinism": 1.0,
+      "shape": "..|..|d.|..|..",
+      "shape_determinism": 1.0,
+      "distinct_shapes": 1,
+      "logs": []
+    },
+    {
+      "discriminator": "5a76c0fcc0632791",
+      "count": 5,
+      "share": 0.0211864406779661,
+      "inner_share": 0.0,
+      "arity": 10,
+      "data_len": 65,
+      "roles": "-----WSW-W-W-W-W-W-W",
+      "roles_determinism": 1.0,
+      "shape": "..|..|..|d.|..|..|..|..|..|..",
+      "shape_determinism": 1.0,
+      "distinct_shapes": 1,
+      "logs": []
+    }
+  ],
+  "log_vocabulary": [
+    {
+      "line": "Phoenix Eternal Admin: UpdateOraclePricesWithOrdering",
+      "count": 15
+    },
+    {
+      "line": "Phoenix Eternal: UpdateSplineParameters",
+      "count": 11
+    },
+    {
+      "line": "Spline parameters updated successfully (with ordering)",
+      "count": 11
+    },
+    {
+      "line": "Phoenix Eternal: Place Market Order",
+      "count": 5
+    },
+    {
+      "line": "Attempting to add position to trader",
+      "count": 5
+    },
+    {
+      "line": "Successfully added position to selected trader",
+      "count": 5
+    },
+    {
+      "line": "8J2trvSqns4iAfLVgh4MKwaxfwZFxmYyNagbMqvDcyW8",
+      "count": 2
+    },
+    {
+      "line": "BcugxuC4uwBgkyWLTdrrz2S5iyovc6jd4ghRzUn17qs7",
+      "count": 1
+    },
+    {
+      "line": "2YyY3Lwqgjy91UB9obmXR6mHSkHy5YVKYKWsWe5yj7c7",
+      "count": 1
+    },
+    {
+      "line": "CrhWhzxEohhjooVdd8G9ZQnyWg9Kpuo2fmqWHhtZvEq2",
+      "count": 1
+    }
+  ]
+}

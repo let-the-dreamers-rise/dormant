@@ -1,0 +1,121 @@
+{
+  "program": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+  "stats": {
+    "blocks": 5,
+    "skipped": 0,
+    "tx": 5385,
+    "failed": 560,
+    "hits": 884
+  },
+  "weighted_determinism": 0.7296380090497737,
+  "operations": [
+    {
+      "discriminator": "e445a52e51cb9a1d",
+      "count": 442,
+      "share": 0.5,
+      "inner_share": 1.0,
+      "arity": 1,
+      "data_len": 441,
+      "roles": "--",
+      "roles_determinism": 1.0,
+      "shape": "..",
+      "shape_determinism": 1.0,
+      "distinct_shapes": 1,
+      "logs": []
+    },
+    {
+      "discriminator": "33e685a4017f83ad",
+      "count": 269,
+      "share": 0.3042986425339366,
+      "inner_share": 0.06319702602230483,
+      "arity": 24,
+      "data_len": 24,
+      "roles": "-WSW-------W-W-W-W---W-------------W-----------W",
+      "roles_determinism": 0.5985130111524164,
+      "shape": "..|d.|..|..|..|d.|..|.u|dd|..|uu|..|..|..|..|..|..|uu|..|..|..|..|..|uu",
+      "shape_determinism": 0.3903345724907063,
+      "distinct_shapes": 26,
+      "logs": [
+        "Instruction: Sell"
+      ]
+    },
+    {
+      "discriminator": "66063d1201daebea",
+      "count": 90,
+      "share": 0.10180995475113122,
+      "inner_share": 0.03333333333333333,
+      "arity": 26,
+      "data_len": 25,
+      "roles": "-WSW-------W-W-W-W---W-------------W-----W---------W",
+      "roles_determinism": 0.5555555555555556,
+      "shape": "..|d.|..|..|..|.u|..|.d|uu|..|uu|..|..|..|..|..|..|uu|..|..|..|..|..|..|..|uu",
+      "shape_determinism": 0.5333333333333333,
+      "distinct_shapes": 8,
+      "logs": [
+        "Instruction: Buy"
+      ]
+    },
+    {
+      "discriminator": "c62e1552b4d9e870",
+      "count": 77,
+      "share": 0.08710407239819004,
+      "inner_share": 0.18181818181818182,
+      "arity": 26,
+      "data_len": 25,
+      "roles": "-WSW-------W-W-W-W---W-------------W-----W---------W",
+      "roles_determinism": 0.5064935064935064,
+      "shape": "..|d.|..|..|..|.u|..|.d|uu|..|uu|..|..|..|..|..|..|uu|..|..|..|..|..|..|..|uu",
+      "shape_determinism": 0.6103896103896104,
+      "distinct_shapes": 14,
+      "logs": [
+        "Instruction: BuyExactQuoteIn"
+      ]
+    },
+    {
+      "discriminator": "f945a4da9667548a",
+      "count": 5,
+      "share": 0.005656108597285068,
+      "inner_share": 0.8,
+      "arity": 4,
+      "data_len": 8,
+      "roles": "SW-W----",
+      "roles_determinism": 1.0,
+      "shape": "..|..|..|..",
+      "shape_determinism": 0.4,
+      "distinct_shapes": 3,
+      "logs": []
+    },
+    {
+      "discriminator": "ea66c2cb96483ee5",
+      "count": 1,
+      "share": 0.0011312217194570137,
+      "inner_share": 1.0,
+      "arity": 5,
+      "data_len": 8,
+      "roles": "-WSW------",
+      "roles_determinism": 1.0,
+      "shape": "u.|d.|..|..|..",
+      "shape_determinism": 1.0,
+      "distinct_shapes": 1,
+      "logs": []
+    }
+  ],
+  "log_vocabulary": [
+    {
+      "line": "Instruction: Sell",
+      "count": 259
+    },
+    {
+      "line": "Instruction: BuyExactQuoteIn",
+      "count": 76
+    },
+    {
+      "line": "Instruction: Buy",
+      "count": 57
+    },
+    {
+      "line": "Instruction: ExtendAccount",
+      "count": 1
+    }
+  ]
+}

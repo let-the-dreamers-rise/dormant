@@ -263,6 +263,117 @@ def test_render_produces_something_a_person_can_read():
     assert "checked:" in out          # the condition was evaluated, not deferred
 
 
+def test_set_authority_CHECKED_cannot_send_control_out_of_the_room():
+    """Tag 4 and tag 7 differ by one byte and could not differ more in effect.
+    The checked variant makes the runtime require the incoming authority's
+    signature, so the Drift shape is unreachable through it. Grading the two
+    alike -- which this library did until the dataset export made the
+    equivalence visible -- is exactly the false alarm that trains people to
+    click through."""
+    unchecked = analyse(_with_program(struct.pack("<I", 4),
+                                      LOADER_UPGRADEABLE, accts=(1, 2, 3)))
+    checked = analyse(_with_program(struct.pack("<I", 7),
+                                    LOADER_UPGRADEABLE, accts=(1, 2, 3)))
+    assert unchecked.findings[0].verdict == CRITICAL
+    assert checked.findings[0].verdict == NOTICE
+    assert "cannot execute" in checked.findings[0].statement
+
+
+def test_set_authority_checked_to_a_signer_reads_as_an_ordinary_rotation():
+    f = analyse(_with_program(struct.pack("<I", 7), LOADER_UPGRADEABLE,
+                              accts=(2, 3, 1))).findings[0]
+    assert f.verdict == NOTICE
+    assert "both parties are present" in f.statement
+
+
+# --- pump.fun AMM, recovered from mainnet ---------------------------------
+# Every value here comes from measurement/discover.py, not from a source file.
+# See the provenance note above PUMP_OPS in dormant/semantics.py.
+
+def pump(disc: str, amount: int = 0, bound: int = 0, tail: bytes = b""):
+    from dormant.semantics import PUMP_AMM
+    data = (bytes.fromhex(disc) + struct.pack("<Q", amount)
+            + struct.pack("<Q", bound) + tail)
+    return analyse(_with_program(data, PUMP_AMM))
+
+
+def test_pump_buy_reads_the_amount_and_the_bound():
+    f = pump("66063d1201daebea", 1_234_567, 9_000_000, b"\x00").findings[0]
+    assert f.verdict == NOTICE
+    assert f.operation == "pump.amm.Buy"
+    assert "1,234,567" in f.statement
+    assert "9,000,000" in f.statement
+
+
+def test_pump_sell_reads_as_giving_up_the_base_token():
+    f = pump("33e685a4017f83ad", 500, 42).findings[0]
+    assert f.operation == "pump.amm.Sell"
+    assert "give up" in f.statement
+    assert "for at least" in f.statement
+
+
+def test_pump_buy_exact_quote_in_is_modelled_separately():
+    f = pump("c62e1552b4d9e870", 7, 8, b"\x00").findings[0]
+    assert f.operation == "pump.amm.BuyExactQuoteIn"
+    assert f.verdict == NOTICE
+
+
+def test_pump_swap_price_is_an_OPEN_condition_not_an_evaluated_one():
+    """The bound is the entire protection, and whether it holds depends on a
+    pool that does not exist yet. With a durable nonce attached, 'not yet' can
+    mean months -- which is the conjunction this library exists to catch."""
+    f = pump("33e685a4017f83ad", 500, 1).findings[0]
+    assert f.evaluated is False
+    assert f.unconditional is False
+    assert "pool price at execution" in f.precondition
+
+
+def test_pump_anchor_event_is_safe_and_not_counted_as_an_operation():
+    """Half of this program's apparent instruction volume is the program
+    invoking itself to emit an event. Reading those as operations would make
+    every Anchor program look twice as large as it is."""
+    f = pump("e445a52e51cb9a1d", 1, 2).findings[0]
+    assert f.verdict == SAFE
+    assert "Touches no account state" in f.statement
+
+
+def test_an_unseen_pump_discriminator_is_UNKNOWN_not_safe():
+    """Two discriminators in the sample carried 0.7% of volume between them and
+    were never named. They must read as unknown rather than inherit the
+    program's modelled status."""
+    f = pump("f945a4da9667548a", 0, 0).findings[0]
+    assert f.verdict == "UNKNOWN"
+    assert "NOT a statement that it is safe" in f.statement
+
+
+def test_an_open_condition_is_never_summarised_as_unconditionally_safe():
+    """No CRITICAL is not the same as no risk. A swap whose only protection is
+    a slippage bound has an open condition on state that does not exist yet,
+    and reporting it as 'SAFE unconditionally' -- which this library did until
+    a program with open-ended economics was modelled -- is simply false."""
+    report = pump("66063d1201daebea", 250, 4, b"\x00")
+    assert report.verdict == NOTICE
+    assert "SAFE unconditionally" not in report.headline
+    assert "not fixed" in report.headline
+
+
+def test_a_never_expiring_swap_names_both_halves():
+    """The conjunction this library exists for, on a program that actually
+    moves money: a durable nonce means 'at execution' may be months away, and
+    the price bound will be judged against a pool nobody has seen."""
+    from dormant.semantics import PUMP_AMM
+    buy = (bytes.fromhex("66063d1201daebea") + struct.pack("<Q", 250)
+           + struct.pack("<Q", 4) + b"\x00")
+    raw = build([(6, [1, 2, 3], struct.pack("<I", 4)),
+                 (7, [1, 2, 3, 4, 5], buy)], n_keys=8)
+    raw = raw.replace(key(6), b58decode(SYSTEM))
+    raw = raw.replace(key(7), b58decode(PUMP_AMM))
+    report = analyse(raw)
+    assert report.durable_nonce is True
+    assert "NEVER EXPIRES" in report.headline
+    assert "pool price" in report.headline
+
+
 def test_an_evaluated_condition_reads_differently_from_an_open_one():
     """\"This IS dangerous, here is why\" and \"this BECOMES dangerous if\" ask
     the reader for different things; conflating them makes a tool sound either

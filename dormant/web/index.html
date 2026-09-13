@@ -374,13 +374,14 @@ const ATA     = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
 const CBUDGET = "ComputeBudget111111111111111111111111111111";
 const MEMO    = "MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr";
 const MEMO_L  = "Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo";
+const PUMPAMM = "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA";
 const SAFE="SAFE", NOTICE="NOTICE", CRITICAL="CRITICAL", UNKNOWN="UNKNOWN";
 
 const PROGRAM_NAMES = {
   [SYSTEM]:"System", [TOKEN]:"SPL Token", [TOKEN22]:"Token-2022",
   [LOADER]:"BPF Loader (upgradeable)", [STAKE]:"Stake", [VOTE]:"Vote",
   [ATA]:"Associated Token Account", [CBUDGET]:"Compute Budget",
-  [MEMO]:"Memo", [MEMO_L]:"Memo (legacy)"
+  [MEMO]:"Memo", [MEMO_L]:"Memo (legacy)", [PUMPAMM]:"pump.fun AMM"
 };
 
 function short(k){
@@ -545,12 +546,33 @@ function loader(ix, ctx){
   if (!(tag in LOADER_OPS))
     return unknownTag(LOADER, "BPFLoaderUpgradeable", tag);
   const name = LOADER_OPS[tag];
-  if (tag === 4 || tag === 7)
-    return authorityFinding(LOADER, "BPFLoaderUpgradeable." + name,
+  if (tag === 4)
+    return authorityFinding(LOADER, "BPFLoaderUpgradeable.SetAuthority",
       "UPGRADE AUTHORITY of program data " + acct(ix,0),
       ix.accounts.length > 2 ? ix.accounts[2].pubkey : "", ctx,
       "Whoever holds it can replace the program's code, and therefore " +
       "control every account the program owns.");
+  /* Tag 7 is tag 4 with one difference, and the difference is the point of
+     the instruction: the runtime REQUIRES the incoming authority to sign, so
+     control cannot leave the room through it. One byte apart on the wire. */
+  if (tag === 7){
+    const newAuth = ix.accounts.length > 2 ? ix.accounts[2].pubkey : "";
+    const target = short(newAuth);
+    if (ctx && newAuth && ctx.signers.has(newAuth))
+      return F(NOTICE, "BPFLoaderUpgradeable.SetAuthorityChecked",
+        "Moves UPGRADE AUTHORITY of program data " + acct(ix,0) + " to " +
+        target + ", which signs this transaction. The checked variant will " +
+        "not accept an authority that is absent, so both parties are " +
+        "present by construction.",
+        "new authority " + target + " is a signer here", LOADER, true);
+    return F(NOTICE, "BPFLoaderUpgradeable.SetAuthorityChecked",
+      "Names " + target + " as the incoming UPGRADE AUTHORITY of program " +
+      "data " + acct(ix,0) + ", but " + target + " does not sign. The " +
+      "checked variant requires it to, so as written this instruction " +
+      "cannot execute — it fails rather than hands anything over.",
+      "new authority " + target + " must sign for this to execute at all",
+      LOADER, true);
+  }
   if (tag === 3)
     return F(CRITICAL, "BPFLoaderUpgradeable.Upgrade",
       "REPLACES THE CODE of program " + acct(ix,1) +
@@ -648,6 +670,52 @@ function memo(ix, program){
 /* An unmodelled program returns UNKNOWN, never SAFE. Reporting silence as
    safety is how a tool like this gets people hurt, and the census says this
    branch is taken for the large majority of real traffic. */
+/* pump.fun AMM. The first program here the RPC cannot name, and the top of
+   the work queue by volume. Recovered from mainnet, not read from source:
+   operation names come from the program's own runtime logs, attributed only
+   in transactions that ran exactly one real instruction of it; the argument
+   layout was tested against the ledger's own balance deltas, where the field
+   at byte 8 matched in 96.6% of Buy and 73.9% of Sell, and the field at byte
+   16 in 4.1% and 0.5%. So byte 8 is the amount and byte 16 is a bound the
+   trade is allowed not to reach. See measurement/discover.py. */
+const ANCHOR_EVENT = "e445a52e51cb9a1d";
+const PUMP_OPS = {
+  "66063d1201daebea": ["Buy", "receive", "spending at most"],
+  "c62e1552b4d9e870": ["BuyExactQuoteIn", "receive", "spending at most"],
+  "33e685a4017f83ad": ["Sell", "give up", "for at least"]
+};
+
+function hex8(d){
+  if (d.length < 8) return "";
+  let s = "";
+  for (let i = 0; i < 8; i++) s += d[i].toString(16).padStart(2, "0");
+  return s;
+}
+
+function num(v){
+  return v === null || v === undefined ? "an unread value"
+                                       : v.toLocaleString("en-US");
+}
+
+function pumpAmm(ix, ctx){
+  const disc = hex8(ix.data);
+  if (disc === ANCHOR_EVENT)
+    return F(SAFE, "pump.amm.event",
+      "An Anchor event: the program invoking itself to record what it just " +
+      "did. Touches no account state.", "true", PUMPAMM);
+  const op = PUMP_OPS[disc];
+  if (!op) return unknownTag(PUMPAMM, "pump.amm", disc || "<no discriminator>");
+  const amount = u64(ix.data, 8), bound = u64(ix.data, 16);
+  if (amount === null) return unknownTag(PUMPAMM, "pump.amm", disc);
+  /* Decimals live in the mint account, which is chain state this library
+     refuses to assume, so raw units are the honest unit to print. */
+  return F(NOTICE, "pump.amm." + op[0],
+    "Swaps through a pump.fun AMM pool: you " + op[1] + " " + num(amount) +
+    " base units, " + op[2] + " " + num(bound) + " quote units. The price " +
+    "is whatever the pool offers at execution; only that bound constrains it.",
+    "pool price at execution stays within the stated bound", PUMPAMM, false);
+}
+
 function analyseInstruction(ix, ctx){
   if (ix.programUnresolved)
     return F(UNKNOWN, "unresolvable",
@@ -663,6 +731,7 @@ function analyseInstruction(ix, ctx){
   if (p === VOTE) return vote(ix, ctx);
   if (p === ATA) return ata(ix);
   if (p === MEMO || p === MEMO_L) return memo(ix, p);
+  if (p === PUMPAMM) return pumpAmm(ix, ctx);
   if (p === CBUDGET)
     return F(SAFE, "ComputeBudget",
       "Changes fees and limits only; touches no account state.", "true", p);
@@ -718,6 +787,20 @@ function headline(r){
       "program or instruction this library does not model. That is not a " +
       "clean bill of health — it is the absence of one. Do not sign on " +
       "the strength of this screen alone."];
+  /* A NOTICE can still carry a condition on state that does not exist yet --
+     a swap protected by nothing but a slippage bound. Reporting that as
+     "nothing transfers control" and stopping would flatten the one thing
+     worth reading. No authority moving is not the same as a fixed outcome. */
+  const deferred = r.findings.filter(f => !f.unconditional && !f.evaluated);
+  if (deferred.length && r.durableNonce)
+    return ["The outcome is not fixed, and it never expires.",
+      "No authority moves here. But this transaction can be submitted at " +
+      "any future time, and what it does then depends on state nobody can " +
+      "see yet: " + deferred.map(f => f.precondition).join("; ") + "."];
+  if (deferred.length)
+    return ["No authority moves, but the outcome is not fixed.",
+      "What this does depends on state at execution: " +
+      deferred.map(f => f.precondition).join("; ") + "."];
   if (r.durableNonce)
     return ["No transfer of control, but it never expires.",
       "A durable nonce is ordinary on its own — 8.14% of mainnet " +
@@ -819,6 +902,9 @@ function run(){
    fixtures that back the Python library. Examples, not anyone's live
    transactions. */
 const SAMPLES = [
+  { name:"A swap that never expires", note:"pump.fun AMM",
+    desc:"The top program by volume, which no RPC can name. Amounts recovered from mainnet, not from an IDL.",
+    b64:"AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAIIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMFN78gl7GdpQlCBi7ZUBl9CmNMVbVcbTU+AkMGOmoY8jIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIAgYDAQIDBAQAAAAHBQECAwQFGWYGPRIB2uvqAEQpNToAAAAAKGvuAAAAAAA=" },
   { name:"Drift signature", note:"critical",
     desc:"Durable nonce plus an upgrade-authority handover to a non-signer.",
     b64:"AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAIIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACqPaRToihsOIQFT73Y64rAMK5PRbBJNLAU3oQBIAAAMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIAgYDAQIDBAQAAAAHAwECAwQEAAAA" },

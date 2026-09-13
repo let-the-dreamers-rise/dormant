@@ -93,6 +93,22 @@ class Report:
             return ("UNDETERMINED -- %d account(s) come from address lookup "
                     "tables and are not named in this payload."
                     % self.unresolved_lookups)
+        # A NOTICE can still carry a condition on state that does not exist
+        # yet -- a swap protected by nothing but a slippage bound, say.
+        # Falling through to "SAFE unconditionally" would flatten the exact
+        # thing this library exists to surface, and would be false besides:
+        # no authority moving is not the same as the outcome being fixed.
+        # Modelling a program with open-ended economics is what exposed this.
+        deferred = [f for f in self.findings
+                    if not f.unconditional and not f.evaluated]
+        if deferred and self.durable_nonce:
+            return ("NOT FIXED, AND IT NEVER EXPIRES -- no authority moves, "
+                    "but the outcome depends on state at execution, which "
+                    "may be months away: "
+                    + "; ".join(f.precondition for f in deferred) + ".")
+        if deferred:
+            return ("NO AUTHORITY MOVES, but the outcome is not fixed: "
+                    + "; ".join(f.precondition for f in deferred) + ".")
         return "SAFE unconditionally -- no authority moves."
 
 
